@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sıfırdan Yapay Zeka Modeli Geliştirme — 5 Üniversiteli İçin Bilimsel Yol Haritası</title>
+  <meta name="description" content="Üniversite başındaki 5 genç için 100% doğrulanmış akademik makaleler, dersler, yazar nitelik denetimi, sıfır-bütçe GPU stratejisi ve VRAM/Chinchilla hesaplayıcıları içeren bilimsel AI yol haritası." />
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="./data.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+    <aside id="sidebar" class="sidebar" aria-label="Ana gezinme menüsü">
+      <div class="brand-box">
+        <div class="brand-eyebrow">Açık Bilim &amp; Mühendislik Rehberi</div>
+        <h2 class="brand-title">Sıfırdan YZ Modeli Yol Haritası</h2>
+        <p class="brand-sub">5 Üniversiteli • Sıfır Bütçe • Doğrulanmış Kaynaklar</p>
+      </div>
+
+      <ul class="nav-list" role="tablist">
+        <li><button class="nav-btn active" data-tab="genel-bakis" role="tab" aria-selected="true"><span>1. Genel Bakış &amp; Gerçeklik</span></button></li>
+        <li><button class="nav-btn" data-tab="tarih" role="tab" aria-selected="false"><span>2. Kronolojik Tarih</span><span id="navCountTimeline" class="nav-count">0</span></button></li>
+        <li><button class="nav-btn" data-tab="altyapi" role="tab" aria-selected="false"><span>3. Altyapı Modülleri</span><span id="navCountInfra" class="nav-count">0</span></button></li>
+        <li><button class="nav-btn" data-tab="hesaplayicilar" role="tab" aria-selected="false"><span>4. VRAM &amp; FLOPs Hesapla</span></button></li>
+        <li><button class="nav-btn" data-tab="sifir-butce" role="tab" aria-selected="false"><span>5. Sıfır Bütçe &amp; GPU</span></button></li>
+        <li><button class="nav-btn" data-tab="ai-kullanim" role="tab" aria-selected="false"><span>6. AI Araçları &amp; Sokrat</span></button></li>
+        <li><button class="nav-btn" data-tab="ekip-plani" role="tab" aria-selected="false"><span>7. 5 Kişilik Ekip Planı</span></button></li>
+        <li><button class="nav-btn" data-tab="kaynak-denetimi" role="tab" aria-selected="false"><span>8. Nitelik Denetimi</span><span id="navCountAudit" class="nav-count">0</span></button></li>
+        <li><button class="nav-btn" data-tab="kutuphane" role="tab" aria-selected="false"><span>9. Tam Kütüphane</span><span id="navCountLibrary" class="nav-count">0</span></button></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="progress-widget">
+          <div class="progress-header">
+            <span>Ekip / Bireysel İlerleme</span>
+            <span id="progressText">0 / 0 (%0)</span>
+          </div>
+          <div class="progress-track">
+            <div id="progressBarFill" class="progress-fill"></div>
+          </div>
+          <div class="progress-actions">
+            <button id="exportProgressBtn" class="btn btn-xs" type="button" title="İlerlemeyi JSON olarak indir">Dışa Aktar</button>
+            <label class="btn btn-xs" for="importProgressInput" title="Arkadaşının JSON ilerlemesini yükle">
+              İçe Aktar
+              <input id="importProgressInput" type="file" accept="application/json" hidden />
+            </label>
+            <button id="resetProgressBtn" class="btn btn-xs btn-danger" type="button">Sıfırla</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuToggle" class="menu-toggle" type="button" aria-label="Menüyü aç/kapat">☰ Menü</button>
+          <h1 id="topbarTitle" class="topbar-title">1. Genel Bakış &amp; Dürüst Gerçeklik Kontrolü</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="printBtn" class="btn btn-xs" type="button" title="Sayfayı yazdır veya PDF kaydet">Yazdır / PDF</button>
+          <button id="themeToggle" class="btn btn-xs" type="button">Açık Tema</button>
+        </div>
+      </header>
+
+      <main class="content-wrap">
+        <!-- 1. GENEL BAKIŞ -->
+        <section id="tab-genel-bakis" class="tab-panel active">
+          <div class="section-hero">
+            <h2>Üniversite Başındaki 5 Genç Sıfırdan Kendi Yapay Zeka Modelini Nasıl Geliştirir?</h2>
+            <p>Bu rehber tahmin veya popüler söylenti değil; <strong>birincil akademik makalelere, üniversite derslerine ve yazar nitelikleri denetlenmiş açık mühendislik kaynaklarına</strong> dayanan bütüncül bir müfredat ve sistem planıdır.</p>
+            <div id="heroStats" class="hero-stats"></div>
+          </div>
+
+          <div class="callout callout-warn">
+            <h4>Baştan Dürüst Olalım: Sıfır Bütçeyle Ne Yapılır, Ne Yapılmaz?</h4>
+            <p>Elinizde bütçe yoksa sıfırdan bir GPT-4 veya DeepSeek-V3 eğitmek hayaldir; fakat <strong>teknolojinin tamamını sıfırdan kodlayıp çalışan modeller eğitmek tamamen mümkündür.</strong> Stratejiniz iki ayaklıdır: (1) Altyapıyı gerçekten çözmek için sıfırdan 10M–150M parametreli Transformer kurup eğitmek, (2) Gerçek dünyada işe yarar güç elde etmek için açık ağırlıklı modellerde QLoRA / SFT / DPO / GRPO uygulamak ve sonrasında TÜBİTAK 2209-A / TRUBA / TRC hibelerine geçmek.</p>
+          </div>
+
+          <h3 class="sub-heading">Doğrulanmış Ölçek &amp; Maliyet Kanıtları</h3>
+          <div id="realityBenchmarksGrid" class="grid-3"></div>
+
+          <div class="callout">
+            <h4>Bu Rehberi Nasıl Kullanmalısınız?</h4>
+            <p>Önce <strong>2. Kronolojik Tarih</strong> sekmesinden bu teknolojinin fikir evrimini takip edin. Ardından <strong>3. Altyapı Modülleri</strong> sekmesinde Modül 0'dan başlayarak ilerleyin. Deney tasarlamadan önce mutlaka <strong>4. VRAM &amp; FLOPs Hesapla</strong> aracından GPU'nuzun sınırını ölçün ve <strong>6. AI Araçları &amp; Sokrat</strong> sekmesindeki bilimsel öğrenme protokolünü uygulayın.</p>
+          </div>
+
+          <p id="ethicsFootnote" class="footer-note"></p>
+        </section>
+
+        <!-- 2. KRONOLOJİK TARİH -->
+        <section id="tab-tarih" class="tab-panel">
+          <div class="section-hero">
+            <h2>Yapay Zeka Tarihi — Kronolojik Akademik Yol Haritası (1943–2026)</h2>
+            <p>1943 yapay nöron modelinden 2026 Türkçe değerlendirme paketlerine kadar dönüm noktası makaleler. <em>Not: 1998 ve öncesi bazı klasik dergi makaleleri yayıncı ödeme duvarı (paywall) arkasında olabilir; yanlarında açık kayıt/arşiv linkleri belirtilmiştir.</em></p>
+          </div>
+
+          <div class="toolbar">
+            <input id="timelineSearch" class="input input-search" type="search" placeholder="Makale, yazar, yıl veya kavram ara (örn. Transformer, 1986, RoPE, Türkçe)..." />
+            <div id="timelineEraChips" class="chip-group">
+              <button class="chip active" data-era="all" type="button">Tüm Dönemler</button>
+              <button class="chip" data-era="classic" type="button">1943–1998 Klasikler</button>
+              <button class="chip" data-era="dl-breakthrough" type="button">2010–2016 Derin Öğrenme</button>
+              <button class="chip" data-era="transformer-era" type="button">2017–2023 Transformer Çağı</button>
+              <button class="chip" data-era="frontier-2026" type="button">2024–2026 Açık Bilim &amp; RL</button>
+            </div>
+          </div>
+
+          <div id="timelineContainer" class="timeline-list"></div>
+
+          <h3 class="sub-heading">Tarihi Bütüncül Okumak İçin Akademik Tarihçe Kitapları &amp; Raporları</h3>
+          <div id="historySynthesisGrid" class="grid-2"></div>
+        </section>
+
+        <!-- 3. ALTYAPI MODÜLLERİ -->
+        <section id="tab-altyapi" class="tab-panel">
+          <div class="section-hero">
+            <h2>Sıfırdan Model Geliştirme Altyapısı — 10 İşlevsel Modül</h2>
+            <p>Üniversite başı seviyesinden başlayarak sırasıyla CS/Linux, Matematik, DL Teorisi, Modern Transformer Kodu, Veri/Tokenizasyon, GPU/CUDA, Ölçekleme/Dağıtık Eğitim, Post-Training/RL, Değerlendirme ve Çok Modlu genişleme katmanları.</p>
+          </div>
+
+          <div class="toolbar">
+            <div id="infraRoleChips" class="chip-group">
+              <button class="chip active" data-role="all" type="button">Tüm Roller</button>
+              <button class="chip" data-role="ortak" type="button">Ortak Çekirdek</button>
+              <button class="chip" data-role="mimari" type="button">Mimari &amp; Matematik</button>
+              <button class="chip" data-role="veri" type="button">Veri &amp; Tokenizasyon</button>
+              <button class="chip" data-role="sistem" type="button">GPU &amp; Sistem</button>
+              <button class="chip" data-role="posttraining" type="button">Post-Training &amp; RL</button>
+              <button class="chip" data-role="eval" type="button">Eval &amp; Servis</button>
+            </div>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+              <button id="infraExpandAllBtn" class="btn btn-xs" type="button">Tümünü Aç</button>
+              <button id="infraCollapseAllBtn" class="btn btn-xs" type="button">Tümünü Kapat</button>
+            </div>
+          </div>
+
+          <div id="infraModulesContainer"></div>
+        </section>
+
+        <!-- 4. VRAM & CHINCHILLA HESAPLAYICILARI -->
+        <section id="tab-hesaplayicilar" class="tab-panel">
+          <div class="section-hero">
+            <h2>Bilimsel Mühendislik Hesaplayıcıları (VRAM &amp; Chinchilla / FLOPs)</h2>
+            <p>Hesaplamalar tahminle değil; <a href="https://blog.eleuther.ai/transformer-math/" target="_blank" rel="noopener noreferrer">EleutherAI Transformer Math 101</a> (<code>C ≈ 6ND</code> ve <code>16N bayt</code>), <a href="https://arxiv.org/abs/1710.03740" target="_blank" rel="noopener noreferrer">Mixed Precision (1710.03740)</a>, <a href="https://arxiv.org/abs/1604.06174" target="_blank" rel="noopener noreferrer">Gradient Checkpointing (1604.06174)</a>, <a href="https://arxiv.org/abs/2305.14314" target="_blank" rel="noopener noreferrer">QLoRA (2305.14314)</a> ve <a href="https://arxiv.org/abs/2203.15556" target="_blank" rel="noopener noreferrer">Chinchilla (2203.15556)</a> formüllerine dayanır.</p>
+          </div>
+
+          <div class="calc-grid">
+            <!-- Hesaplayıcı 1: VRAM -->
+            <div class="calc-panel">
+              <h3 style="margin-top:0;">1. GPU VRAM &amp; Ücretsiz GPU Uygunluk Hesaplayıcısı</h3>
+
+              <div class="form-row">
+                <label for="vramParamsM"><span>Model Parametre Sayısı (Milyon — M)</span><strong id="vramParamsLabel">124 M</strong></label>
+                <input id="vramParamsM" class="range-input" type="range" min="10" max="8000" step="10" value="124" />
+              </div>
+
+              <div class="form-row">
+                <label for="vramMode"><span>Eğitim Modu</span></label>
+                <select id="vramMode" class="select" style="width:100%;">
+                  <option value="mixed">Sıfırdan Eğitim — Mixed Precision (BF16/FP16) + AdamW (16N bayt)</option>
+                  <option value="fp32">Sıfırdan Eğitim — Tam FP32 + AdamW (16N bayt + yüksek aktivasyon)</option>
+                  <option value="qlora">İnce Ayar — 4-bit QLoRA (~0.5N taban + %1.5 adaptör + AdamW)</option>
+                </select>
+              </div>
+
+              <div class="grid-2" style="gap:10px;">
+                <div class="form-row">
+                  <label for="vramBatch"><span>Mikro Batch Boyutu (b)</span></label>
+                  <input id="vramBatch" class="input" style="width:100%;" type="number" min="1" max="128" value="4" />
+                </div>
+                <div class="form-row">
+                  <label for="vramSeq"><span>Bağlam Uzunluğu (s)</span></label>
+                  <input id="vramSeq" class="input" style="width:100%;" type="number" min="128" max="8192" step="128" value="1024" />
+                </div>
+                <div class="form-row">
+                  <label for="vramHidden"><span>Gizli Boyut (d_model)</span></label>
+                  <input id="vramHidden" class="input" style="width:100%;" type="number" min="128" max="4096" step="64" value="768" />
+                </div>
+                <div class="form-row">
+                  <label for="vramLayers"><span>Katman Sayısı (L)</span></label>
+                  <input id="vramLayers" class="input" style="width:100%;" type="number" min="2" max="48" value="12" />
+                </div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                <label class="done-check"><input id="vramGradCkpt" type="checkbox" checked /> Gradient Checkpointing Aktif (~%70 aktivasyon belleği tasarrufu)</label>
+                <label class="done-check"><input id="vramUnsloth" type="checkbox" /> Unsloth Kernel Optimizasyonu (yalnızca QLoRA için ekstra aktivasyon düşüşü)</label>
+              </div>
+
+              <div class="calc-result-box">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span>Statik Bellek (Ağırlık + Gradyan + Optimizer):</span>
+                  <strong id="vramStaticGb">0 GB</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span>Tahmini Aktivasyon + Çerçeve Payı:</span>
+                  <strong id="vramActGb">0 GB</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:17px; padding-top:8px; border-top:1px solid var(--border);">
+                  <span>Toplam Planlama VRAM İhtiyacı:</span>
+                  <strong id="vramTotalGb" style="color:var(--accent);">0 GB</strong>
+                </div>
+                <p id="vramBreakdownText" class="small muted" style="margin:8px 0 0;"></p>
+                <div id="vramGpuCompat" class="gpu-compat-list"></div>
+                <p class="small muted" style="margin:10px 0 0;"><em>Şeffaflık Notu:</em> Aktivasyon belleği dikkat başlıkları, ara projeksiyonlar ve PyTorch önbellek ayırıcısına göre değişir; bu çıktı planlama amaçlı yaklaşık bir kestirimdir, kesin profilleme için GPU'da <code>torch.cuda.max_memory_allocated()</code> ölçülmelidir.</p>
+              </div>
+            </div>
+
+            <!-- Hesaplayıcı 2: Chinchilla & FLOPs -->
+            <div class="calc-panel">
+              <h3 style="margin-top:0;">2. Chinchilla Ölçekleme &amp; Eğitim FLOPs (C ≈ 6ND)</h3>
+
+              <div class="form-row">
+                <label for="chParamsM"><span>Hedef Model Parametresi N (Milyon — M)</span><strong id="chParamsLabel">124 M</strong></label>
+                <input id="chParamsM" class="range-input" type="range" min="10" max="3000" step="10" value="124" />
+              </div>
+
+              <div class="form-row">
+                <label for="chTokensB"><span>Eğitim Veri Miktarı D (Milyar Token — B)</span><strong id="chTokensLabel">2.5 B</strong></label>
+                <input id="chTokensB" class="range-input" type="range" min="0.1" max="100" step="0.1" value="2.5" />
+              </div>
+
+              <div class="form-row">
+                <label for="chHardware"><span>Karşılaştırma Donanımı (Referans Tepe TFLOPS)</span></label>
+                <select id="chHardware" class="select" style="width:100%;">
+                  <option value="65">1× NVIDIA T4 (Colab/Kaggle — ~65 TFLOPS FP16 tepe)</option>
+                  <option value="130">2× NVIDIA T4 (Kaggle Dual — ~130 TFLOPS FP16 tepe)</option>
+                  <option value="312">1× NVIDIA A100 80GB (~312 TFLOPS BF16 Tensor Core tepe)</option>
+                  <option value="989">1× NVIDIA H100 SXM (~989 TFLOPS BF16 tepe)</option>
+                  <option value="7912">8× NVIDIA H100 Node (~7912 TFLOPS BF16 tepe)</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label for="chMfu"><span>Model FLOPs Kullanım Oranı (MFU Varsayımı)</span><strong id="chMfuLabel">%35</strong></label>
+                <input id="chMfu" class="range-input" type="range" min="15" max="55" step="1" value="35" />
+              </div>
+
+              <div class="calc-result-box">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span>Chinchilla Optimal Token Önerisi (≈ 20N):</span>
+                  <strong id="chOptimalTokens">0 B Token</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span>Toplam Hesaplama (C ≈ 6 × N × D):</span>
+                  <strong id="chTotalFlops">0 FLOPs</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:17px; padding-top:8px; border-top:1px solid var(--border);">
+                  <span>Tahmini Eğitim Süresi:</span>
+                  <strong id="chEstHours" style="color:var(--accent);">0 saat</strong>
+                </div>
+                <p id="chRatioNote" class="small" style="margin:10px 0 0;"></p>
+                <p class="small muted" style="margin:8px 0 0;"><em>MFU Varsayımı Notu:</em> Gerçek dünya MFU oranı FlashAttention, batch boyutu, veri yükleme hızı ve iletişim yüküne bağlı olarak genellikle %25–%50 arasındadır. Ücretsiz T4 gibi küçük kartlarda bellek bant genişliği ve düşük batch nedeniyle MFU daha düşük gerçekleşebilir.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. SIFIR BÜTÇE & ÜCRETSİZ GPU -->
+        <section id="tab-sifir-butce" class="tab-panel">
+          <div class="section-hero">
+            <h2>Sıfır Bütçe Stratejisi: Ücretsiz GPU, Öğrenci Kredileri &amp; Ulusal Altyapı</h2>
+            <p>Doğrulanmış ücretsiz platform kotaları, oturum sınırları ve üniversite öğrencisi olmanın sağladığı akademik GPU kapıları.</p>
+          </div>
+
+          <div id="freeComputeGrid" class="grid-2"></div>
+
+          <h3 class="sub-heading">4 Basamaklı Sıfır-Bütçe Deney Merdiveni</h3>
+          <div id="zeroBudgetLadder" class="grid-2"></div>
+        </section>
+
+        <!-- 6. AI ARAÇLARINI BİLİMSEL KULLANMA -->
+        <section id="tab-ai-kullanim" class="tab-panel">
+          <div class="section-hero">
+            <h2>Premium Yapay Zeka Araçlarını Öğrenmeyi Bozmadan Kullanma Protokolü</h2>
+            <p id="aiTutorIntro"></p>
+          </div>
+
+          <h3 class="sub-heading">Hakemli Bilimsel Kanıtlar (PNAS 2025 &amp; Harvard *Scientific Reports* 2025)</h3>
+          <div id="aiStudiesGrid" class="grid-2"></div>
+
+          <h3 class="sub-heading">5 Altın Kullanım Kuralı</h3>
+          <div id="aiRulesList" class="card" style="margin-bottom:20px;"></div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3 class="card-title">Kopyalanabilir "Sokratik AI Eğitmen" Sistem İstemi</h3>
+                <p class="card-meta">Premium AI araçlarınızda yeni bir Proje / Custom Instruction / Sistem İstemi açıp bunu yapıştırın.</p>
+              </div>
+              <button id="copyPromptBtn" class="btn btn-primary btn-xs" type="button">İstemi Kopyala</button>
+            </div>
+            <pre id="socraticPromptText" class="prompt-box"></pre>
+          </div>
+        </section>
+
+        <!-- 7. 5 KİŞİLİK EKİP PLANI -->
+        <section id="tab-ekip-plani" class="tab-panel">
+          <div class="section-hero">
+            <h2>5 Üniversiteli İçin Uzmanlık Rolleri &amp; 12 Aylık Faz Planı</h2>
+            <p>Herkes aynı anda her şeyi okumaya çalışırsa ekip dağılır. Ortak temelden sonra 5 net teknik rol paylaşımıyla birbirini tamamlayan bir ekip mimarisi kurun.</p>
+          </div>
+
+          <h3 class="sub-heading">5 Uzmanlık Rolü ve İlk Ay Görevleri</h3>
+          <div id="teamRolesGrid" class="grid-3"></div>
+
+          <h3 class="sub-heading">Faz 0 → Faz 4: 12 Aylık Aşamalı Mühendislik Takvimi</h3>
+          <div id="teamPhasesList" class="grid-2"></div>
+        </section>
+
+        <!-- 8. NİTELİK DENETİMİ -->
+        <section id="tab-kaynak-denetimi" class="tab-panel">
+          <div class="section-hero">
+            <h2>Hakemli Olmayan Kaynaklar İçin Yazar &amp; Kurum Nitelik Karnesi</h2>
+            <p>Akademik hakemli dergi/konferans dışında kalan her blog, playbook, kitap, açık kurs ve GitHub deposunun yazar kimliği, akademik/sektör geçmişi ve dürüst kısıt notları.</p>
+          </div>
+
+          <div class="toolbar">
+            <input id="auditSearch" class="input input-search" type="search" placeholder="Yazar, kurum, kaynak veya kısıt ara (örn. Karpathy, Stanford, NVIDIA)..." />
+            <select id="auditCategorySelect" class="select">
+              <option value="all">Tüm Kategoriler</option>
+            </select>
+            <span id="auditCountBadge" class="badge badge-neutral">0 kaynak</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:22%;">Kaynak &amp; Tür</th>
+                  <th style="width:42%;">Yazar / Kurum &amp; Doğrulanmış Nitelikleri</th>
+                  <th style="width:36%;">Dürüst Kısıt &amp; Kullanım Notu</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 9. TAM KÜTÜPHANE -->
+        <section id="tab-kutuphane" class="tab-panel">
+          <div class="section-hero">
+            <h2>Doğrulanmış Tüm Kaynaklar Kütüphanesi (Makaleler, Dersler, Kitaplar, Repolar, GPU)</h2>
+            <p>Tüm rehberdeki tekilleştirilmiş kaynakları kategori, tür, zorluk, ekip rolü ve okuma durumuna göre filtreleyin; ekibinizle ilerlemenizi JSON olarak paylaşın.</p>
+          </div>
+
+          <div class="toolbar">
+            <input id="libSearch" class="input input-search" type="search" placeholder="Başlık, yazar, arXiv/konu ara..." />
+            <select id="libCategorySelect" class="select"><option value="all">Tüm Kategoriler</option></select>
+            <select id="libTypeSelect" class="select"><option value="all">Tüm Türler</option></select>
+            <select id="libLevelSelect" class="select">
+              <option value="all">Tüm Seviyeler</option>
+              <option value="Başlangıç">Başlangıç</option>
+              <option value="Temel">Temel</option>
+              <option value="Orta">Orta</option>
+              <option value="İleri">İleri</option>
+            </select>
+            <select id="libRoleSelect" class="select">
+              <option value="all">Tüm Roller</option>
+              <option value="ortak">Ortak Çekirdek</option>
+              <option value="mimari">Mimari &amp; Matematik</option>
+              <option value="veri">Veri &amp; Tokenizasyon</option>
+              <option value="sistem">GPU &amp; Sistem</option>
+              <option value="posttraining">Post-Training &amp; RL</option>
+              <option value="eval">Eval &amp; Servis</option>
+            </select>
+            <label class="done-check"><input id="libOnlyUnread" type="checkbox" /> Sadece Okunmayanlar</label>
+            <span id="libCountBadge" class="badge badge-neutral">0 kaynak</span>
+          </div>
+
+          <div id="libraryGrid" class="grid-2"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
