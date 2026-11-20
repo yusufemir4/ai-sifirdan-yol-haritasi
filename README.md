@@ -1,35 +1,30 @@
-# Sıfırdan Yapay Zeka Modeli Geliştirme — 5 Üniversiteli İçin Bilimsel Yol Haritası
+# Lintu AI Yol Haritası — Sıfırdan Yapay Zeka Modeli Geliştirme (v2)
 
-Üniversite başındaki ("her şeyin temeli"), bütçesi sıfıra yakın 5 gencin yapay zeka teknolojisini temelden kavraması ve sıfırdan kendi modelini geliştirme sürecini adım adım çözmesi için hazırlanmış **%100 kaynaklı, yazar nitelikleri denetlenmiş ve etkileşimli** HTML rehberidir.
+Üniversite başındaki ("her şeyin temeli"), bütçesi sıfıra yakın 5 gencin yapay zeka teknolojisini temelden kavraması ve sıfırdan kendi modelini geliştirme sürecini çözmesi için **Lintu marka tasarımıyla** hazırlanmış **%100 kaynaklı, başlangıç destekli, olay örgülü ve etkileşimli** HTML web rehberidir.
 
-- **Canlı GitHub Pages Adresi (Yayınlandıktan Sonra):** [https://yusufemir4.github.io/ai-sifirdan-yol-haritasi/](https://yusufemir4.github.io/ai-sifirdan-yol-haritasi/)
-- **Çevrimdışı / Yerel Kullanım:** Harici CDN veya build aracı gerektirmez; `index.html` dosyasını tarayıcıda doğrudan (`file://` üzerinden bile) açabilirsiniz.
+- **Canlı GitHub Pages Adresi:** [https://yusufemir4.github.io/ai-sifirdan-yol-haritasi/](https://yusufemir4.github.io/ai-sifirdan-yol-haritasi/)
+- **Yerel Kullanım:** Build aracı gerektirmez; `index.html` dosyasını tarayıcıda (`file://` üzerinden bile) doğrudan açabilirsiniz.
 
-## Neler İçerir?
+## Lintu v2 ile Eklenen Yenilikler
 
-1. **Genel Bakış & Dürüst Gerçeklik Kontrolü:** `TinyStories` (`arXiv:2305.07759`), `llm.c` (`karpathy/llm.c`), `nanochat` (`karpathy/nanochat`), `Chinchilla` (`arXiv:2203.15556`) ve `DeepSeek-V3` (`arXiv:2412.19437`) verileriyle sıfır bütçeyle nelerin mümkün, nelerin gerçek dışı olduğunun şeffaf özeti.
-2. **Kronolojik Yapay Zeka Tarihi (1943–2026):** McCulloch & Pitts (1943), Turing (1950), Dartmouth (1955), Backpropagation (1986), LSTM (1997), AlexNet (2012), Attention (2014), Transformer (2017), GPT-1/2/3, Chinchilla, FlashAttention, DeepSeek-V3/R1, OLMo 2, SmolLM2, FineWeb2, TurkishMMLU ve CETVEL (EACL 2026) dahil kronolojik makale zinciri.
-3. **10 İşlevsel Altyapı Modülü (Modül 0 – Modül 9):** Linux/Git & Python'dan başlayarak Matematik, Derin Öğrenme Teorisi, Modern Transformer Kodlaması (Pre-LN, RMSNorm, SwiGLU, RoPE, GQA), Veri/Tokenizasyon, GPU/CUDA/Triton, Dağıtık Eğitim, Post-Training/RL (LoRA/QLoRA/DPO/GRPO), Değerlendirme/Serving ve Çok Modlu genişleme.
-4. **İnteraktif Mühendislik Hesaplayıcıları:**
-   - **GPU VRAM & Ücretsiz GPU Uygunluk Hesaplayıcısı:** EleutherAI *Transformer Math 101* (`16N` bayt kuralı), Mixed Precision (`arXiv:1710.03740`), Gradient Checkpointing (`arXiv:1604.06174`) ve QLoRA (`arXiv:2305.14314`) esaslı planlama aracı.
-   - **Chinchilla Ölçekleme & Eğitim FLOPs (`C ≈ 6ND`) Hesaplayıcısı:** Parametre/token oranı ve MFU varsayımlarıyla yaklaşık eğitim süresi kestirimi.
-5. **Sıfır Bütçe & Ücretsiz GPU Kaynakları:** Kaggle (~30s/hafta GPU + ~20s/hafta TPU), Google Colab Free (T4), Lightning AI Studios, GitHub Student Pack + Azure for Students (\$100), Google TPU Research Cloud (TRC), TÜBİTAK ULAKBİM TRUBA (ARF-ACC) ve TÜBİTAK 2209-A.
-6. **AI Araçlarını Bilimsel Kullanma Protokolü:** Bastani et al. (PNAS, 2025) ve Kestin et al. (Harvard, *Scientific Reports*, 2025) RCT çalışmalarına dayalı 5 kural ve kopyalanabilir **Sokratik AI Eğitmen** sistem istemi.
-7. **5 Kişilik Ekip Rolleri & 12 Aylık Faz Planı:** Mimari/Matematik, Veri/Tokenizasyon, GPU/Sistem, Post-Training/RL ve Eval/Servis rolleri.
-8. **Yazar & Kurum Nitelik Karnesi:** Hakemli dergi dışındaki her blog, playbook, açık kurs, kitap ve repo için doğrulanmış yazar geçmişi ve dürüst kısıt notları.
-9. **Tam Kütüphane & İlerleme Paylaşımı:** `localStorage` okundu takibi ve 5 arkadaş arasında ilerleme paylaşımı için JSON Dışa/İçe Aktar desteği.
+- **Lintu Marka Tasarım Sistemi & Maskot Rehberliği:** `logo-full.png`, `mark.png`, `mascot-head.png` ve `mascot.png` marka görselleri, koyu-öncelikli (`#0e0f11`) Lintu renk tokenları (`#2f97d1 → #65c39f` gradyan ve `#ef3355` maskot vurgusu), 6 adımlı **Lintu Maskot Turu** modalı ve sağ altta bağlamsal **Lintu Rehber** balonu.
+- **0. Sıfırdan Başla, Yardım Al & 28 Temel Terim:** Hiç bilmeyenler için 7 günlük başlangıç planı, doğrulanmış ücretsiz yardım kanalları (BTK Akademi, Kaggle Learn, fast.ai, Python Docs, PyTorch Forums, Hugging Face Forums, EleutherAI), 5 kopyalanabilir *"Takıldım"* AI istemi, üniversite danışman hocası için TÜBİTAK 2209-A / TRUBA başvuru e-postası ve günlük benzetmeli 28 terim sözlüğü.
+- **Olay Örgüsü (7 Perde) ↔ Kronoloji (82 Makale):** 1943–2026 tarihini sadece yıl listesi değil; her perdede *Sahne → Çarpılan Duvar → Kırılma Anı → Sonraki Perdeye Köprü* nedensellik akışıyla anlatır ve tıklanan makaleye kronolojik listede doğrudan atlar.
+- **Gelişmiş Seçim & Bireysel Yerel Kayıt:** Çoklu üye profili (`+ Üye`), profil rol/seviyesine göre **`✨ Önerilen`** kaynak vurgusu, **3 durumlu seçim** (`Başlanmadı` / `Çalışıyorum` / `Tamamlandı`), favori (`★`), kişisel not ve **Yerel Dosya Bağla** (File System Access API ile diskteki gerçek JSON dosyasına otomatik kayıt + JSON / SecondBrain Obsidian `.md` dışa aktarımı).
 
-## Doğrulama İlkeleri
+## Teknik İçerik ve Doğrulama
 
-- Tüm bağlantılar doğrudan kanonik adreslerdir (hiçbir yönlendirme/izleme URL'si veya tahminî arXiv/DOI içermez).
-- Yayıncı ödeme duvarı (paywall) riski bulunan klasik dergi makaleleri açıkça işaretlenmiş ve varsa açık arşiv/Semantic Scholar bağlantıları eklenmiştir.
-- Kullanıcı talebi gereği veri etiği/telif/KVKK uyum süreçleri sonraki faza bırakılmıştır; kamuya açık yayın öncesi ayrıca ele alınmalıdır.
+- **84 Doğrulanmış Akademik Makale** + **30+ Ders, Kitap, Blog & Repo** + **7 Sıfır-Bütçe GPU/Hibe Kaynağı** (`data.js` & `lintu-extras.js`).
+- **10 İşlevsel Altyapı Modülü (Modül 0–9)** ve **VRAM / Chinchilla (`C ≈ 6ND`, `16N bayt`) Mühendislik Hesaplayıcıları**.
+- **Yazar & Kurum Nitelik Karnesi:** Hakemli dergi dışındaki tüm blog, playbook, kurs ve depoların yazar geçmişi ve dürüst kısıtları denetlenmiştir.
+- **Not:** Veri etiği, telif ve KVKK/GDPR süreçleri kullanıcı talebi gereği sonraki faza bırakılmıştır; halka açık model/veri yayını öncesinde ayrıca ele alınmalıdır.
 
 ## Dosya Yapısı
 
-- `index.html` — Ana etkileşimli web uygulaması
-- `styles.css` — Açık/koyu tema, duyarlı düzen ve baskı/PDF stilleri
-- `data.js` — Doğrulanmış makale, ders, kitap, blog, GPU ve nitelik veritabanı (`window.ROADMAP_DATA`)
-- `app.js` — Filtreleme, ilerleme takibi, JSON dışa/içe aktarım ve VRAM/FLOPs hesaplayıcıları
+- `index.html` — Ana etkileşimli web uygulaması (10 sekme + Lintu Maskot Turu)
+- `styles.css` — Lintu marka CSS tokenları, açık/koyu tema, olay örgüsü ve baskı stilleri
+- `data.js` — 84 makale, 82 kronolojik dönüm noktası, 10 altyapı modülü ve doğrulanmış bağlantılar
+- `lintu-extras.js` — Başlangıç rehberi, 28 terimlik sözlük, 7 perdelik olay örgüsü ve Lintu tur adımları
+- `app.js` — Çoklu profil, 3 durumlu seçim, gerçek yerel dosya oto-kaydı, Obsidian `.md` çıktısı ve hesaplayıcılar
+- `assets/brand/` — Lintu marka logoları ve maskot görselleri (`logo-full.png`, `mark.png`, `mascot-head.png`, `mascot.png`)
 - `.nojekyll` — GitHub Pages statik sunum yapılandırması
-- `README.md` — Proje dokümantasyonu
