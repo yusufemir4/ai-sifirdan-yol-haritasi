@@ -1695,6 +1695,84 @@ tr:last-child td {
   height: 11px;
 }
 
+.streak-pill-btn {
+  background: var(--warm-soft);
+  border-color: rgba(200, 133, 20, 0.35);
+  color: var(--warm);
+  font-weight: 700;
+}
+
+.streak-banner {
+  background: linear-gradient(120deg, var(--brand-soft) 0%, var(--green-soft) 60%, var(--warm-soft) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.streak-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 320px;
+}
+
+.streak-mascot-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.streak-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.streak-banner-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.streak-14-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.streak-dot-day {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.streak-dot-day.login-only {
+  background: #fde6b8;
+  border-color: #e6b355;
+}
+
+.streak-dot-day.studied {
+  background: var(--brand-green);
+  border-color: #248a6a;
+}
+
+[data-theme="dark"] .streak-dot-day.login-only {
+  background: rgba(227, 169, 58, 0.35);
+  border-color: var(--warm);
+}
+
 /* Mobile Backdrop */
 .sidebar-backdrop {
   display: none;

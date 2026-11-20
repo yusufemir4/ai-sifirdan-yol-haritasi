@@ -116,7 +116,8 @@
       topics: {},
       weeks: {},
       bookmarks: {},
-      activityLog: {}
+      activityLog: {},
+      loginDays: []
     };
   }
 
@@ -169,7 +170,10 @@
           topics: cleanBoolMap(m && m.topics),
           weeks: cleanBoolMap(m && m.weeks),
           bookmarks: cleanBoolMap(m && m.bookmarks),
-          activityLog: cleanActivityLog(m && m.activityLog)
+          activityLog: cleanActivityLog(m && m.activityLog),
+          loginDays: Array.isArray(m && m.loginDays)
+            ? Array.from(new Set(m.loginDays.map((x) => String(x || "")).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)))).sort()
+            : []
         };
       });
       if (Object.keys(nextMembers).length > 0) {
@@ -375,6 +379,11 @@
       .sort((a, b) => a[0].localeCompare(b[0]))
       .slice(-90)
       .map(([dk, cnt]) => `${dk.replace(/-/g, "").slice(2)}:${cnt}`);
+    const compactLogins = (member.loginDays || [])
+      .filter((dk) => /^\d{4}-\d{2}-\d{2}$/.test(dk))
+      .sort()
+      .slice(-90)
+      .map((dk) => dk.replace(/-/g, "").slice(2));
     const payload = {
       v: 3,
       n: name,
@@ -385,6 +394,7 @@
       b: Object.keys(member.bookmarks || {}).filter((k) => member.bookmarks[k])
     };
     if (compactDays.length > 0) payload.a = compactDays;
+    if (compactLogins.length > 0) payload.l = compactLogins;
     return "LINTU3-" + utf8ToBase64Url(JSON.stringify(payload));
   }
 
@@ -411,6 +421,12 @@
           if (cnt > 0) activityLog[dk] = { items: [], checkIns: cnt, note: "" };
         });
       }
+      const loginDays = Array.isArray(parsed.l)
+        ? parsed.l.map((tok) => {
+          const m = /^(\d{2})(\d{2})(\d{2})$/.exec(String(tok || ""));
+          return m ? `20${m[1]}-${m[2]}-${m[3]}` : null;
+        }).filter(Boolean).sort()
+        : [];
       return {
         memberName: parsed.n.trim() || "Üye",
         role: ROLE_LABELS[parsed.r] ? parsed.r : "ortak",
@@ -420,7 +436,8 @@
         topics: unpackBitmaskHex(parsed.t, getTopicIds()),
         weeks: unpackBitmaskHex(parsed.w, getWeekIds()),
         bookmarks,
-        activityLog
+        activityLog,
+        loginDays
       };
     } catch (_) {
       return null;
@@ -434,7 +451,8 @@
       topics: decoded.topics,
       weeks: decoded.weeks,
       bookmarks: decoded.bookmarks,
-      activityLog: cleanActivityLog(decoded.activityLog)
+      activityLog: cleanActivityLog(decoded.activityLog),
+      loginDays: Array.isArray(decoded.loginDays) ? decoded.loginDays : []
     };
     appState.activeMember = decoded.memberName;
     appState.startMonth = decoded.startMonth;
@@ -579,11 +597,8 @@
     return itemId;
   }
 
-  function computeStreakStats(activityLog, nowDate) {
-    const log = activityLog && typeof activityLog === "object" ? activityLog : {};
-    const activeKeys = Object.keys(log)
-      .filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && getActivityCount(log[k]) > 0)
-      .sort();
+  function computeConsecutiveStreaks(sortedDateKeys, nowDate) {
+    const activeKeys = Array.from(new Set(sortedDateKeys || [])).sort();
     const activeSet = new Set(activeKeys);
 
     const today = nowDate instanceof Date ? new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate()) : new Date();
@@ -622,6 +637,52 @@
       currentStreak,
       longestStreak
     };
+  }
+
+  function computeStreakStats(activityLog, nowDate) {
+    const log = activityLog && typeof activityLog === "object" ? activityLog : {};
+    const activeKeys = Object.keys(log)
+      .filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && getActivityCount(log[k]) > 0);
+    return computeConsecutiveStreaks(activeKeys, nowDate);
+  }
+
+  function recordDailyLogin(member, nowDate) {
+    if (!member) return false;
+    if (!Array.isArray(member.loginDays)) member.loginDays = [];
+    const dk = toLocalDateKey(nowDate instanceof Date ? nowDate : new Date());
+    if (member.loginDays.includes(dk)) return false;
+    member.loginDays.push(dk);
+    member.loginDays = Array.from(new Set(member.loginDays)).sort();
+    return true;
+  }
+
+  function computeLoginStreak(loginDays, nowDate) {
+    const valid = Array.isArray(loginDays)
+      ? loginDays.filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k))
+      : [];
+    return computeConsecutiveStreaks(valid, nowDate);
+  }
+
+  function getMotivationMessage(loginStreak, studyStreak, pct) {
+    if (loginStreak >= 30) {
+      return `Efsanevi disiplin! ${loginStreak} gündür üst üste buradasın. Büyük modeller sabırlı mühendislerin elinden çıkar.`;
+    }
+    if (loginStreak >= 14) {
+      return `Harika tempo! ${loginStreak} günlük giriş serisiyle artık bu yolculuğu kalıcı bir alışkanlığa çevirdin.`;
+    }
+    if (loginStreak >= 7) {
+      return `Tam 1 haftalık (${loginStreak} gün) kesintisiz seri! Her gün 20 dakika bile bir yılda dev fark yaratır.`;
+    }
+    if (loginStreak >= 3) {
+      return `Güzel gidiyorsun! ${loginStreak} gündür seriyi bozmadın. Bugün 1 konu veya 10 dakikalık okuma ile devam et.`;
+    }
+    if (studyStreak >= 1) {
+      return `Bugün çalışmanı kaydettin, harika başlangıç! Yarın tekrar uğrayarak seriyi büyüt.`;
+    }
+    if (pct >= 25) {
+      return `Yolun %${pct}'ini geride bıraktın! Bugün küçük bir adım atarak giriş ve çalışma serini tazele.`;
+    }
+    return `Hoş geldin! İlk gün en önemli gündür. Bugün sadece 1 kavram öğrenip "Bugün Çalıştım"a basman yeterli.`;
   }
 
   /* ---------- Takvim Ay Etiketi ---------- */
@@ -799,6 +860,53 @@
     setTxt("heroLevelProgress", `${m.doneTopics}/${m.totalTopics}`);
     setTxt("heroCalendarProgress", `${m.doneWeeks}/${m.totalWeeks}`);
     setTxt("heroResourceCount", DATA && DATA.ALL_RESOURCES ? String(DATA.ALL_RESOURCES.length) : "143");
+
+    const loginStats = computeLoginStreak(member.loginDays);
+    const studyStats = computeStreakStats(member.activityLog);
+    setTxt("topbarStreakBadge", `🔥 ${loginStats.currentStreak} Gün Giriş`);
+
+    renderMotivationBanner(member, loginStats, studyStats, m);
+  }
+
+  function renderMotivationBanner(member, loginStats, studyStats, metrics) {
+    const card = $("motivationStreakCard");
+    if (!card) return;
+    const msg = getMotivationMessage(loginStats.currentStreak, studyStats.currentStreak, metrics.pct);
+    const loginSet = new Set(Array.isArray(member.loginDays) ? member.loginDays : []);
+    const log = member.activityLog || {};
+
+    const strip = [];
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const dk = toLocalDateKey(d);
+      const studied = getActivityCount(log[dk]) > 0;
+      const loggedIn = loginSet.has(dk);
+      const cls = studied ? "studied" : (loggedIn ? "login-only" : "");
+      const statusTxt = studied ? "Çalışma kayıtlı" : (loggedIn ? "Giriş yapıldı" : "Kayıt yok");
+      strip.push(`<span class="streak-dot-day ${cls}" title="${escapeHtml(formatFullTurkishDate(dk))}: ${statusTxt}"></span>`);
+    }
+
+    card.innerHTML = `
+      <div class="streak-banner-left">
+        <img class="streak-mascot-icon" src="./assets/brand/mascot-head.png" alt="Lintu maskotu" />
+        <div>
+          <div class="streak-badges-row">
+            <span class="badge badge-warn">🔥 Giriş Serisi: ${loginStats.currentStreak} gün</span>
+            <span class="badge badge-ok">⚡ Çalışma Serisi: ${studyStats.currentStreak} gün</span>
+            <span class="badge">🏆 Rekor: ${Math.max(loginStats.longestStreak, studyStats.longestStreak)} gün</span>
+          </div>
+          <p class="small" style="margin:0;"><strong>Lintu:</strong> ${escapeHtml(msg)}</p>
+        </div>
+      </div>
+      <div class="streak-banner-right">
+        <div class="streak-14-strip" aria-label="Son 14 gün giriş ve çalışma özeti">${strip.join("")}</div>
+        <div class="inline-row">
+          <button type="button" class="btn btn-primary btn-xs" data-quick-checkin>✓ Bugün Çalıştım (+1)</button>
+          <button type="button" class="btn btn-xs" data-open-heatmap>Isı Haritasını Gör →</button>
+        </div>
+      </div>
+    `;
   }
 
   /* ---------- 0. Başlangıç Sekmesi ---------- */
@@ -2033,6 +2141,28 @@
         return;
       }
 
+      const quickCheckin = target.closest("[data-quick-checkin]");
+      if (quickCheckin) {
+        const todayKey = toLocalDateKey(new Date());
+        const now = new Date();
+        selectedPersonalDate = todayKey;
+        personalViewYear = now.getFullYear();
+        personalViewMonth = now.getMonth();
+        addManualStudyCheckIn(getActiveMember(), todayKey);
+        saveState();
+        refreshAllProgressUI();
+        showToast("Harika! Bugünkü çalışman seriye eklendi.");
+        return;
+      }
+
+      const openHeatmap = target.closest("[data-open-heatmap]");
+      if (openHeatmap) {
+        calViewMode = "personal";
+        switchTab("takvim");
+        renderCalendarTab();
+        return;
+      }
+
       const calMonthCard = target.closest("[data-cal-month]");
       if (calMonthCard) {
         selectedCalMonth = Number(calMonthCard.getAttribute("data-cal-month")) || 1;
@@ -2104,6 +2234,13 @@
     // Hero kısayolları
     if ($("heroGoLevelsBtn")) $("heroGoLevelsBtn").addEventListener("click", () => switchTab("seviyeler"));
     if ($("heroGoCalendarBtn")) $("heroGoCalendarBtn").addEventListener("click", () => switchTab("takvim"));
+    if ($("topbarStreakBadge")) {
+      $("topbarStreakBadge").addEventListener("click", () => {
+        calViewMode = "personal";
+        switchTab("takvim");
+        renderCalendarTab();
+      });
+    }
     if ($("heroStartTourBtn")) $("heroStartTourBtn").addEventListener("click", () => openTour(0));
     if ($("openTourBtn")) $("openTourBtn").addEventListener("click", () => openTour(0));
     if ($("mascotOpenTourBtn")) $("mascotOpenTourBtn").addEventListener("click", () => openTour(0));
@@ -2376,6 +2513,7 @@
         member.weeks = {};
         member.bookmarks = {};
         member.activityLog = {};
+        member.loginDays = [];
         saveState();
         refreshAllProgressUI();
         showToast("İlerleme sıfırlandı.");
@@ -2419,9 +2557,18 @@
     renderHistoryTab();
     renderToolsTab();
     renderLibraryTab();
+    const isNewLoginDay = recordDailyLogin(getActiveMember());
+    if (isNewLoginDay) saveState();
     updateHeaderAndSidebarProgress();
     switchTab("baslangic");
     bindEvents();
+
+    if (isNewLoginDay) {
+      const ls = computeLoginStreak(getActiveMember().loginDays);
+      showToast(ls.currentStreak > 1
+        ? `🔥 Giriş serin ${ls.currentStreak}. gününde! Harika gidiyorsun.`
+        : "✨ Hoş geldin! Giriş serin bugün başladı.");
+    }
 
     if (typeof localStorage !== "undefined") {
       try {
@@ -2440,6 +2587,8 @@
       updateVramCalc,
       updateChinchillaCalc,
       computeStreakStats,
+      computeLoginStreak,
+      recordDailyLogin,
       toLocalDateKey,
       logItemCompletion,
       addManualStudyCheckIn
