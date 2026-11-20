@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lintu AI Yol Haritası — Sıfırdan Yapay Zeka Modeli Geliştirme</title>
-  <meta name="description" content="Lintu stili ve maskot rehberliğiyle, üniversite başındaki 5 genç için 100% kaynaklı, başlangıç destekli, olay örgülü ve sıfır-bütçeli yapay zeka modeli geliştirme yol haritası." />
+  <title>Lintu AI Yol Haritası v3 — Sıfırdan Yapay Zeka Modeli Geliştirme</title>
+  <meta name="description" content="Lintu rehberliğiyle üniversite başındaki 5 genç için sıfırdan yapay zeka modeli geliştirme: seviye tabanlı müfredat, 12 aylık takvim, olay örgüsü ve sıfır-bütçe araçları." />
   <link rel="icon" href="./assets/brand/mark.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="./data.js"></script>
   <script defer src="./lintu-extras.js"></script>
+  <script defer src="./v3-curriculum.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -20,76 +21,68 @@
 
     <aside id="sidebar" class="sidebar" aria-label="Ana gezinme menüsü">
       <div class="brand-box">
-        <img class="brand-logo-sq" src="./assets/brand/logo-full.png" alt="Lintu logosu" />
-        <div>
-          <div class="eyebrow">Lintu · Akademi</div>
-          <h2 class="brand-title"><span class="grad-text">YZ Modeli</span> Rehberi</h2>
+        <div class="brand-logo-badge">
+          <img class="brand-logo-img" src="./assets/brand/logo-full.png" alt="Lintu logosu" />
+        </div>
+        <div class="brand-text">
+          <div class="eyebrow">Lintu · Akademi v3</div>
+          <h2 class="brand-title"><span class="grad-text">YZ Modeli</span> Yol Haritası</h2>
           <p class="brand-sub">5 Genç • Sıfır Bütçe • Tam Kaynak</p>
         </div>
       </div>
 
-      <ul class="nav-list" role="tablist">
-        <li><button class="nav-btn" data-tab="baslangic" role="tab" aria-selected="false"><span>0. Sıfırdan Başla &amp; Yardım</span><span class="nav-badge-new">BAŞLA</span></button></li>
-        <li><button class="nav-btn active" data-tab="genel-bakis" role="tab" aria-selected="true"><span>1. Genel Bakış &amp; Gerçeklik</span></button></li>
-        <li><button class="nav-btn" data-tab="tarih" role="tab" aria-selected="false"><span>2. Olay Örgüsü &amp; Tarih</span><span id="navCountTimeline" class="nav-count">0</span></button></li>
-        <li><button class="nav-btn" data-tab="altyapi" role="tab" aria-selected="false"><span>3. Altyapı Modülleri</span><span id="navCountInfra" class="nav-count">0</span></button></li>
-        <li><button class="nav-btn" data-tab="hesaplayicilar" role="tab" aria-selected="false"><span>4. VRAM &amp; FLOPs Hesapla</span></button></li>
-        <li><button class="nav-btn" data-tab="sifir-butce" role="tab" aria-selected="false"><span>5. Sıfır Bütçe &amp; GPU</span></button></li>
-        <li><button class="nav-btn" data-tab="ai-kullanim" role="tab" aria-selected="false"><span>6. AI Araçları &amp; Sokrat</span></button></li>
-        <li><button class="nav-btn" data-tab="ekip-plani" role="tab" aria-selected="false"><span>7. 5 Kişilik Ekip Planı</span></button></li>
-        <li><button class="nav-btn" data-tab="kaynak-denetimi" role="tab" aria-selected="false"><span>8. Nitelik Denetimi</span><span id="navCountAudit" class="nav-count">0</span></button></li>
-        <li><button class="nav-btn" data-tab="kutuphane" role="tab" aria-selected="false"><span>9. Tam Kütüphane</span><span id="navCountLibrary" class="nav-count">0</span></button></li>
-      </ul>
+      <nav aria-label="Ana sekmeler">
+        <ul class="nav-list" role="tablist">
+          <li>
+            <button class="nav-btn active" data-tab="baslangic" role="tab" aria-selected="true" type="button">
+              <span>0. Başlangıç &amp; Rehber</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="seviyeler" role="tab" aria-selected="false" type="button">
+              <span>1. Seviyeler &amp; Müfredat</span>
+              <span id="navCountLevels" class="nav-count">0</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="takvim" role="tab" aria-selected="false" type="button">
+              <span>2. 12 Aylık Takvim</span>
+              <span id="navCountCalendar" class="nav-count">0</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="tarih" role="tab" aria-selected="false" type="button">
+              <span>3. Olay Örgüsü &amp; Tarih</span>
+              <span id="navCountTimeline" class="nav-count">0</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="araclar" role="tab" aria-selected="false" type="button">
+              <span>4. Araçlar &amp; Ekip</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="kutuphane" role="tab" aria-selected="false" type="button">
+              <span>5. Kütüphane &amp; Denetim</span>
+              <span id="navCountLibrary" class="nav-count">0</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
 
       <div class="sidebar-footer">
-        <div class="profile-widget">
-          <div class="eyebrow" style="margin-bottom:6px;">Bireysel Profil</div>
-          <div class="profile-row">
-            <select id="profileSelect" class="select select-sm" aria-label="Profil seç"></select>
-            <button id="newProfileBtn" class="btn btn-xs" type="button" title="Yeni ekip üyesi profili ekle">+ Üye</button>
+        <div class="sidebar-progress-card">
+          <div class="sidebar-progress-top">
+            <span id="sidebarMemberLabel" class="sidebar-member-name">Üye Seçilmedi</span>
+            <span id="sidebarProgressPct" class="mono sidebar-pct">%0</span>
           </div>
-          <div class="profile-sub-grid">
-            <select id="profileRoleSelect" class="select select-sm" aria-label="Hedef rol">
-              <option value="ortak">Ortak Çekirdek</option>
-              <option value="mimari">Mimari &amp; Mat.</option>
-              <option value="veri">Veri &amp; Tokenizer</option>
-              <option value="sistem">GPU &amp; Sistem</option>
-              <option value="posttraining">Post-Training &amp; RL</option>
-              <option value="eval">Eval &amp; Servis</option>
-            </select>
-            <select id="profileLevelSelect" class="select select-sm" aria-label="Seviye">
-              <option value="Başlangıç">Başlangıç</option>
-              <option value="Temel">Temel</option>
-              <option value="Orta">Orta</option>
-              <option value="İleri">İleri</option>
-            </select>
+          <div class="progress-track" aria-hidden="true">
+            <div id="sidebarProgressBar" class="progress-fill-done"></div>
           </div>
-        </div>
-
-        <div class="progress-widget">
-          <div class="progress-header">
-            <span>İlerleme Durumu</span>
-            <span id="progressText" class="mono">0 / 0 (%0)</span>
-          </div>
-          <div class="progress-track">
-            <div id="progressBarFillDone" class="progress-fill-done"></div>
-            <div id="progressBarFillDoing" class="progress-fill-doing"></div>
-          </div>
-          <div class="local-save-status">
-            <span id="localSaveStatusDot" class="status-dot"></span>
-            <span id="localSaveStatusText">Tarayıcı belleği (localStorage)</span>
-          </div>
-          <div class="progress-actions">
-            <button id="linkLocalFileBtn" class="btn btn-primary btn-xs" type="button" title="Bilgisayarında gerçek bir JSON dosyasına bağla ve her tıklamada otomatik kaydet">Yerel Dosya Bağla</button>
-            <button id="openLocalFileBtn" class="btn btn-xs" type="button" title="Kaydettiğin JSON dosyasını aç">Dosyadan Aç</button>
-            <button id="exportObsidianBtn" class="btn btn-xs" type="button" title="SecondBrain / Obsidian uyumlu .md ilerleme raporu indir">Obsidian .md</button>
-            <button id="exportProgressBtn" class="btn btn-xs" type="button" title="JSON yedek indir">JSON İndir</button>
-            <label class="btn btn-xs" for="importProgressInput" title="JSON içe aktar">
-              Yükle
-              <input id="importProgressInput" type="file" accept="application/json" hidden />
-            </label>
-            <button id="resetProgressBtn" class="btn btn-xs btn-danger" type="button">Sıfırla</button>
-          </div>
+          <p id="sidebarSaveHint" class="sidebar-save-hint">Tarayıcı belleğinde otomatik kaydedilir.</p>
+          <button id="sidebarOpenProgressBtn" class="btn btn-primary btn-sm btn-block" type="button">
+            İlerleme &amp; Yedek
+          </button>
         </div>
       </div>
     </aside>
@@ -97,379 +90,198 @@
     <div class="main-area">
       <header class="topbar">
         <div class="topbar-left">
-          <button id="menuToggle" class="menu-toggle" type="button" aria-label="Menüyü aç/kapat">☰ Menü</button>
+          <button id="menuToggle" class="menu-toggle" type="button" aria-label="Menüyü aç veya kapat">☰ Menü</button>
           <img class="topbar-mark" src="./assets/brand/mark.png" alt="Lintu simgesi" />
-          <h1 id="topbarTitle" class="topbar-title">1. Genel Bakış &amp; Dürüst Gerçeklik Kontrolü</h1>
+          <h1 id="topbarTitle" class="topbar-title">0. Başlangıç &amp; Rehber</h1>
         </div>
         <div class="topbar-actions">
           <button id="openTourBtn" class="btn btn-xs" type="button">
             <img class="btn-icon-img" src="./assets/brand/mascot-head.png" alt="" /> Lintu Turu
           </button>
-          <button id="printBtn" class="btn btn-xs" type="button">Yazdır / PDF</button>
-          <button id="themeToggle" class="btn btn-xs" type="button">Açık Tema</button>
+          <button id="openProgressBtn" class="btn btn-xs" type="button">İlerleme &amp; Yedek</button>
+          <button id="themeToggle" class="btn btn-xs" type="button">Koyu Tema</button>
         </div>
       </header>
 
       <main class="content-wrap">
-        <!-- 0. SIFIRDAN BAŞLA & YARDIM -->
-        <section id="tab-baslangic" class="tab-panel">
+        <!-- 0. BAŞLANGIÇ & REHBER -->
+        <section id="tab-baslangic" class="tab-panel active">
+          <div class="hero-card">
+            <div class="hero-main">
+              <div class="eyebrow">Lintu Akademi · Sıfırdan Model Geliştirme v3</div>
+              <h2 class="hero-title">Sıfırdan <span class="grad-text">Yapay Zeka Modeli</span> Geliştirme Yol Haritası</h2>
+              <p class="hero-desc">Üniversite başındaki 5 kişilik ekip için sade, bilimsel ve sıfır-bütçe dostu mühendislik rehberi. Her konunun nerede işe yaradığını gör, seviyeni tamamla ve 12 aylık takvimde ilerle.</p>
+              <div class="hero-actions">
+                <button id="heroStartTourBtn" class="btn btn-primary" type="button">Lintu Turunu Başlat</button>
+                <button id="heroGoLevelsBtn" class="btn" type="button">Seviyelere Git →</button>
+                <button id="heroGoCalendarBtn" class="btn" type="button">12 Aylık Takvim →</button>
+              </div>
+            </div>
+            <div class="hero-metrics">
+              <div class="metric-pill">
+                <span class="metric-label">Seviye İlerlemesi</span>
+                <strong id="heroLevelProgress" class="metric-value mono">%0</strong>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Takvim İlerlemesi</span>
+                <strong id="heroCalendarProgress" class="metric-value mono">%0</strong>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Doğrulanmış Kaynak</span>
+                <strong id="heroResourceCount" class="metric-value mono">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-pills" role="tablist" aria-label="Başlangıç alt sekmeleri">
+            <button class="sub-pill active" data-subtab-group="baslangic" data-subtab="sub-start-7day" type="button" role="tab" aria-selected="true">İlk 7 Gün Planı</button>
+            <button class="sub-pill" data-subtab-group="baslangic" data-subtab="sub-start-help" type="button" role="tab" aria-selected="false">Yardım &amp; Danışman</button>
+            <button class="sub-pill" data-subtab-group="baslangic" data-subtab="sub-start-glossary" type="button" role="tab" aria-selected="false">Temel Sözlük</button>
+            <button class="sub-pill" data-subtab-group="baslangic" data-subtab="sub-start-reality" type="button" role="tab" aria-selected="false">Gerçeklik Kontrolü</button>
+          </div>
+
+          <div id="sub-start-7day" class="sub-panel active">
+            <div class="section-intro">
+              <h3>İlk 7 Gün Başlangıç Planı</h3>
+              <p class="muted">Hiç ön bilgin olmadan ilk haftada sağlam temel atmak için günlük mini hedefler.</p>
+            </div>
+            <div id="sevenDayPlanGrid" class="grid-3"></div>
+          </div>
+
+          <div id="sub-start-help" class="sub-panel">
+            <div class="section-intro">
+              <h3>Takıldığında Başvurabileceğin Kanallar</h3>
+              <p class="muted">Doğrulanmış topluluklar, açık dersler ve üniversite danışman hocası için hazır e-posta şablonu.</p>
+            </div>
+            <div id="helpChannelsGrid" class="grid-2"></div>
+            <div class="card mt-lg">
+              <div class="card-head">
+                <div>
+                  <h4 class="card-title">Üniversite Danışman Hocasına Başvuru E-Postası</h4>
+                  <p class="card-meta">TÜBİTAK 2209-A ve TRUBA GPU erişimi için öğretim üyesine gönderebileceğin taslak.</p>
+                </div>
+                <button id="copyAdvisorEmailBtn" class="btn btn-primary btn-xs" type="button">E-Postayı Kopyala</button>
+              </div>
+              <pre id="advisorEmailText" class="prompt-box"></pre>
+            </div>
+          </div>
+
+          <div id="sub-start-glossary" class="sub-panel">
+            <div class="toolbar">
+              <input id="glossarySearch" class="input input-search" type="search" placeholder="Terim ara (örn. Token, VRAM, Gradyan, QLoRA, Chinchilla)..." />
+              <span id="glossaryCountBadge" class="badge badge-neutral">0 terim</span>
+            </div>
+            <div id="glossaryGrid" class="grid-2"></div>
+          </div>
+
+          <div id="sub-start-reality" class="sub-panel">
+            <div class="callout callout-warm">
+              <h4>Baştan Dürüst Olalım: Sıfır Bütçeyle Ne Yapılır, Ne Yapılmaz?</h4>
+              <p>Sıfırdan GPT-4 eğitmek mümkün değildir; ancak mimarinin tamamını sıfırdan kodlayıp 10M–150M parametreli Transformer modelleri eğitmek, ardından açık modeller üzerinde QLoRA / SFT / DPO / GRPO uygulamak tamamen mümkündür.</p>
+            </div>
+            <div id="realityGrid" class="grid-3 mt-md"></div>
+          </div>
+        </section>
+
+        <!-- 1. SEVİYELER & MÜFREDAT -->
+        <section id="tab-seviyeler" class="tab-panel">
           <div class="section-hero">
-            <div class="eyebrow">Hiç Bilmeyenler İçin Destek Üssü</div>
-            <h2>Sıfırdan Başla, Yardım Al &amp; Temel Kavramlar</h2>
-            <p>Üniversiteye yeni başladıysan ve "nereden yardım alacağım, bu kelimeler ne demek?" diyorsan doğru yerdesin. Burası tekniği basitleştirmeden önce seni sağlam zemine taşır.</p>
+            <div class="eyebrow">Aşamalı Öğrenme Yolu</div>
+            <h2>Seviye Bazlı Müfredat &amp; Konu Haritası</h2>
+            <p>Her seviyeyi sırayla takip et, konuların altında "Nerede İşe Yarar?" kutusunu incele ve tamamladıklarını işaretle.</p>
           </div>
 
-          <h3 class="sub-heading">İlk 7 Gün Planı (Sıfır Ön Bilgiyle Başlangıç)</h3>
-          <div id="sevenDayPlanGrid" class="grid-3"></div>
+          <div id="levelStepper" class="level-stepper" aria-label="Seviye seçici"></div>
 
-          <h3 class="sub-heading">Takıldığında Nereden Yardım Alabilirsin? (Doğrulanmış Kanallar)</h3>
-          <div id="helpChannelsGrid" class="grid-2"></div>
-
-          <h3 class="sub-heading">5 Kopyalanabilir "Takıldım" AI İstemi</h3>
-          <p class="small muted" style="margin:-6px 0 12px;">Cevabı kopyalatıp tembelleşmek yerine anlamak için premium yapay zeka aracına bunları yapıştır:</p>
-          <div id="stuckPromptsGrid" class="grid-2"></div>
-
-          <h3 class="sub-heading">Üniversitede Danışman Hoca Bulma (TÜBİTAK 2209-A &amp; TRUBA İçin Hazır E-Posta)</h3>
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <h4 class="card-title">Bölüm Öğretim Üyesine Başvuru Şablonu</h4>
-                <p class="card-meta">TRUBA GPU kümesi ve TÜBİTAK 2209-A desteği almak için bir akademisyen danışman gerekir.</p>
-              </div>
-              <button id="copyAdvisorEmailBtn" class="btn btn-primary btn-xs" type="button">E-Postayı Kopyala</button>
-            </div>
-            <pre id="advisorEmailText" class="prompt-box"></pre>
-          </div>
-
-          <h3 class="sub-heading">28 Temel Terim Sözlüğü (Sade Tanım + Günlük Benzetme)</h3>
           <div class="toolbar">
-            <input id="glossarySearch" class="input input-search" type="search" placeholder="Terim ara (örn. Token, VRAM, Gradyan, QLoRA, Chinchilla)..." />
-            <span id="glossaryCountBadge" class="badge badge-neutral">28 terim</span>
+            <label class="filter-label" for="levelRoleFilter">Rol Filtresi:</label>
+            <select id="levelRoleFilter" class="select">
+              <option value="all">Tüm Roller</option>
+              <option value="ortak">Ortak Çekirdek</option>
+              <option value="mimari">Mimari &amp; Mat.</option>
+              <option value="veri">Veri &amp; Tokenizer</option>
+              <option value="sistem">GPU &amp; Sistem</option>
+              <option value="posttraining">Post-Training &amp; RL</option>
+              <option value="eval">Eval &amp; Servis</option>
+            </select>
+            <div id="levelSummaryBar" class="level-summary-bar"></div>
           </div>
-          <div id="glossaryGrid" class="grid-2"></div>
+
+          <div id="levelsContainer"></div>
         </section>
 
-        <!-- 1. GENEL BAKIŞ -->
-        <section id="tab-genel-bakis" class="tab-panel active">
-          <header class="mast">
-            <img class="mast-logo" src="./assets/brand/logo-full.png" alt="Lintu logosu" />
-            <div>
-              <p class="eyebrow">Lintu rapor · Bilimsel Yol Haritası</p>
-              <h2><span class="grad-text">Sıfırdan Yapay Zeka</span> Modeli Geliştirme</h2>
-              <p class="muted" style="margin:0;">Üniversite başındaki 5 genç için 100% kaynaklı, kronolojik, olay örgülü, sıfır-bütçe mühendislik rehberi.</p>
-              <div class="mast-meta">
-                <span>Sürüm <b class="mono">Lintu v2</b></span>
-                <span>Kapsam <b>1943–2026 Akademik Literatür</b></span>
-                <span>Durum <b>Yerel + GitHub Pages</b></span>
-                <span>Kayıt <b>Yerel Dosya + JSON + Obsidian</b></span>
-              </div>
-            </div>
-          </header>
-          <div class="rule" role="presentation"></div>
-
-          <div id="heroStats" class="facts-strip"></div>
-
-          <div class="callout border-brand-gradient" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
-            <div>
-              <h4 style="margin:0 0 4px;">İlk Kez mi Başlıyorsun?</h4>
-              <p class="small muted" style="margin:0;">Makalelere dalmadan önce <strong>0. Sıfırdan Başla &amp; Yardım</strong> sekmesinde 7 günlük plan ve 28 terimlik sözlük var; ayrıca <strong>2. Olay Örgüsü &amp; Tarih</strong> sekmesinde her icadın hikâyesini okuyabilirsin.</p>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button id="openBaslangicFromHomeBtn" class="btn btn-primary btn-xs" type="button">0. Sıfırdan Başla →</button>
-              <button id="openStoryFromHomeBtn" class="btn btn-xs" type="button">Olay Örgüsünü Oku →</button>
-            </div>
+        <!-- 2. 12 AYLIK TAKVİM -->
+        <section id="tab-takvim" class="tab-panel">
+          <div class="section-hero">
+            <div class="eyebrow">Yıllık ve Aylık Planlama</div>
+            <h2>12 Aylık Mühendislik Takvimi</h2>
+            <p>Yıllık kuşbakışı görünümden aylara geç, haftalık hedefleri ve ekip odak dağılımını takip et.</p>
           </div>
 
-          <div class="callout callout-warn">
-            <h4>Baştan Dürüst Olalım: Sıfır Bütçeyle Ne Yapılır, Ne Yapılmaz?</h4>
-            <p>Elinizde bütçe yoksa sıfırdan GPT-4 veya DeepSeek-V3 eğitmek hayaldir; fakat <strong>teknolojinin tamamını sıfırdan kodlayıp çalışan modeller eğitmek tamamen mümkündür.</strong> İki aşamalı strateji: (1) Altyapıyı gerçekten çözmek için sıfırdan 10M–150M parametreli Transformer kurup eğitmek, (2) İşe yarar kalite için açık modellerde QLoRA / SFT / DPO / GRPO uygulayıp TÜBİTAK 2209-A / TRUBA / TRC hibelerine geçmek.</p>
-          </div>
-
-          <h3 class="sub-heading">Doğrulanmış Ölçek &amp; Maliyet Kanıtları</h3>
-          <div id="realityBenchmarksGrid" class="grid-3"></div>
-
-          <div class="lintu-closing-note">
-            <img src="./assets/brand/mascot-head.png" alt="Lintu maskotu" />
-            <div>
-              <strong class="font-display">Lintu Notu:</strong>
-              <span class="muted"> Teknik derinliği hiç sulandırmadık; ama nereden başlayacağını bilmeyen için basamakları da netleştirdik. Sol alttan adını ve rolünü seç, ilerlemeni gerçek yerel dosyana bağlayıp ekibinle paylaş!</span>
+          <div class="toolbar">
+            <div class="view-switch" role="tablist" aria-label="Takvim görünümü">
+              <button id="calViewAnnualBtn" class="view-btn active" type="button">Yıllık Kuşbakışı</button>
+              <button id="calViewMonthlyBtn" class="view-btn" type="button">Aylık &amp; Haftalık</button>
             </div>
+            <div class="toolbar-group">
+              <label class="filter-label" for="calStartMonthSelect">Başlangıç:</label>
+              <select id="calStartMonthSelect" class="select">
+                <option value="relative">Göreceli (Ay 1 – Ay 12)</option>
+                <option value="2026-10">Ekim 2026</option>
+                <option value="2026-11">Kasım 2026</option>
+                <option value="2026-12">Aralık 2026</option>
+                <option value="2027-01">Ocak 2027</option>
+                <option value="2027-02">Şubat 2027</option>
+                <option value="2027-09">Eylül 2027</option>
+              </select>
+            </div>
+            <div id="calProgressSummary" class="cal-progress-summary"></div>
           </div>
 
-          <p id="ethicsFootnote" class="footer-note"></p>
-          <footer class="lintu-footer">
-            <span>Lintu AI Yol Haritası · Sıfırdan Model Geliştirme</span>
-            <span class="mono">github.com/yusufemir4/ai-sifirdan-yol-haritasi</span>
-          </footer>
+          <div id="calAnnualView">
+            <div id="annualCalendarGrid" class="annual-grid"></div>
+          </div>
+
+          <div id="calMonthlyView" hidden>
+            <div class="month-nav-bar">
+              <button id="calPrevMonthBtn" class="btn btn-xs" type="button">← Önceki Ay</button>
+              <div id="calMonthPills" class="month-pills"></div>
+              <button id="calNextMonthBtn" class="btn btn-xs" type="button">Sonraki Ay →</button>
+            </div>
+            <div id="calMonthDetail"></div>
+          </div>
         </section>
 
-        <!-- 2. OLAY ÖRGÜSÜ & KRONOLOJİK TARİH -->
+        <!-- 3. OLAY ÖRGÜSÜ & TARİH -->
         <section id="tab-tarih" class="tab-panel">
           <div class="section-hero">
             <div class="eyebrow">Nedensellik Hikâyesi + Kronoloji</div>
-            <h2>Yapay Zeka Tarihi — Olay Örgüsü &amp; 82 Makale (1943–2026)</h2>
-            <p>Önce <strong>Olay Örgüsü</strong> görünümünde her icadın hangi duvara çarptığı için doğduğunu 7 perdede gör; sonra herhangi bir makale çipine tıklayıp <strong>Kronolojik Liste</strong> içinde teknik detayını aç.</p>
+            <h2>Yapay Zeka Tarihi — Olay Örgüsü &amp; Makale Kronolojisi</h2>
+            <p>Önce her icadın hangi soruna çözüm olarak doğduğunu 7 perdelik olay örgüsünde gör; ardından kronolojik listede makaleleri filtrele.</p>
           </div>
 
           <div class="toolbar">
-            <div class="view-switch" role="tablist" aria-label="Tarih görünüm seçimi">
-              <button id="viewStoryBtn" class="view-btn active" type="button">Olay Örgüsü (7 Perde)</button>
-              <button id="viewChronoBtn" class="view-btn" type="button">Kronolojik Liste (82 Makale)</button>
+            <div class="view-switch" role="tablist" aria-label="Tarih görünüm modu">
+              <button id="histModeStoryBtn" class="view-btn active" type="button">Olay Örgüsü (7 Perde)</button>
+              <button id="histModeListBtn" class="view-btn" type="button">Kronolojik Liste</button>
             </div>
           </div>
 
           <div id="storyArcSection">
-            <div id="storyArcContainer" class="story-arc-list"></div>
+            <div id="storyArcsGrid" class="story-arc-list"></div>
           </div>
 
-          <div id="chronoSection" style="display:none;">
+          <div id="timelineListSection" hidden>
             <div class="toolbar">
-              <input id="timelineSearch" class="input input-search" type="search" placeholder="Makale, yazar, yıl veya kavram ara (örn. Transformer, 1986, RoPE, Türkçe)..." />
-              <div id="timelineEraChips" class="chip-group">
-                <button class="chip active" data-era="all" type="button">Tüm Dönemler</button>
-                <button class="chip" data-era="classic" type="button">1943–1998 Klasikler</button>
-                <button class="chip" data-era="dl-breakthrough" type="button">2010–2016 Derin Öğrenme</button>
-                <button class="chip" data-era="transformer-era" type="button">2017–2023 Transformer</button>
-                <button class="chip" data-era="frontier-2026" type="button">2024–2026 Açık Bilim</button>
-              </div>
-            </div>
-            <div id="timelineContainer" class="timeline-list"></div>
-          </div>
-
-          <h3 class="sub-heading">Tarihi Bütüncül Okumak İçin Akademik Tarihçe Kitapları &amp; Raporları</h3>
-          <div id="historySynthesisGrid" class="grid-2"></div>
-        </section>
-
-        <!-- 3. ALTYAPI MODÜLLERİ -->
-        <section id="tab-altyapi" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Mühendislik Mimarisi</div>
-            <h2>Sıfırdan Model Geliştirme Altyapısı — 10 İşlevsel Modül</h2>
-            <p>Üniversite başından ileri düzeye: CS/Linux, Matematik, DL Teorisi, Modern Transformer Kodu, Veri/Tokenizasyon, GPU/CUDA, Dağıtık Eğitim, Post-Training/RL, Değerlendirme ve Çok Modlu genişleme.</p>
-          </div>
-
-          <div class="toolbar">
-            <div id="infraRoleChips" class="chip-group">
-              <button class="chip active" data-role="all" type="button">Tüm Roller</button>
-              <button class="chip" data-role="ortak" type="button">Ortak Çekirdek</button>
-              <button class="chip" data-role="mimari" type="button">Mimari &amp; Mat.</button>
-              <button class="chip" data-role="veri" type="button">Veri &amp; Tokenizer</button>
-              <button class="chip" data-role="sistem" type="button">GPU &amp; Sistem</button>
-              <button class="chip" data-role="posttraining" type="button">Post-Training &amp; RL</button>
-              <button class="chip" data-role="eval" type="button">Eval &amp; Servis</button>
-            </div>
-            <div style="margin-left:auto; display:flex; gap:8px;">
-              <button id="infraExpandAllBtn" class="btn btn-xs" type="button">Tümünü Aç</button>
-              <button id="infraCollapseAllBtn" class="btn btn-xs" type="button">Tümünü Kapat</button>
-            </div>
-          </div>
-
-          <div id="infraModulesContainer"></div>
-        </section>
-
-        <!-- 4. VRAM & CHINCHILLA HESAPLAYICILARI -->
-        <section id="tab-hesaplayicilar" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Mühendislik Planlama Aracı</div>
-            <h2>Bilimsel Mühendislik Hesaplayıcıları (VRAM &amp; Chinchilla / FLOPs)</h2>
-            <p>Formül kaynakları: <a href="https://blog.eleuther.ai/transformer-math/" target="_blank" rel="noopener noreferrer">EleutherAI Transformer Math 101</a> (<code>C ≈ 6ND</code>, <code>16N bayt</code>), <a href="https://arxiv.org/abs/1710.03740" target="_blank" rel="noopener noreferrer">Mixed Precision (1710.03740)</a>, <a href="https://arxiv.org/abs/1604.06174" target="_blank" rel="noopener noreferrer">Gradient Checkpointing (1604.06174)</a>, <a href="https://arxiv.org/abs/2305.14314" target="_blank" rel="noopener noreferrer">QLoRA (2305.14314)</a> ve <a href="https://arxiv.org/abs/2203.15556" target="_blank" rel="noopener noreferrer">Chinchilla (2203.15556)</a>.</p>
-          </div>
-
-          <div class="calc-grid">
-            <div class="calc-panel">
-              <h3 style="margin-top:0;">1. GPU VRAM &amp; Ücretsiz GPU Uygunluk Hesaplayıcısı</h3>
-              <div class="form-row">
-                <label for="vramParamsM"><span>Model Parametre Sayısı (Milyon — M)</span><strong id="vramParamsLabel" class="mono">124 M</strong></label>
-                <input id="vramParamsM" class="range-input" type="range" min="10" max="8000" step="10" value="124" />
-              </div>
-              <div class="form-row">
-                <label for="vramMode"><span>Eğitim Modu</span></label>
-                <select id="vramMode" class="select" style="width:100%;">
-                  <option value="mixed">Sıfırdan Eğitim — Mixed Precision (BF16/FP16) + AdamW (16N bayt)</option>
-                  <option value="fp32">Sıfırdan Eğitim — Tam FP32 + AdamW (16N bayt + yüksek aktivasyon)</option>
-                  <option value="qlora">İnce Ayar — 4-bit QLoRA (~0.5N taban + %1.5 adaptör + AdamW)</option>
-                </select>
-              </div>
-              <div class="grid-2" style="gap:10px;">
-                <div class="form-row">
-                  <label for="vramBatch"><span>Mikro Batch Boyutu (b)</span></label>
-                  <input id="vramBatch" class="input" style="width:100%;" type="number" min="1" max="128" value="4" />
-                </div>
-                <div class="form-row">
-                  <label for="vramSeq"><span>Bağlam Uzunluğu (s)</span></label>
-                  <input id="vramSeq" class="input" style="width:100%;" type="number" min="128" max="8192" step="128" value="1024" />
-                </div>
-                <div class="form-row">
-                  <label for="vramHidden"><span>Gizli Boyut (d_model)</span></label>
-                  <input id="vramHidden" class="input" style="width:100%;" type="number" min="128" max="4096" step="64" value="768" />
-                </div>
-                <div class="form-row">
-                  <label for="vramLayers"><span>Katman Sayısı (L)</span></label>
-                  <input id="vramLayers" class="input" style="width:100%;" type="number" min="2" max="48" value="12" />
-                </div>
-              </div>
-              <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
-                <label class="done-check"><input id="vramGradCkpt" type="checkbox" checked /> Gradient Checkpointing Aktif (~%70 aktivasyon tasarrufu)</label>
-                <label class="done-check"><input id="vramUnsloth" type="checkbox" /> Unsloth Kernel Optimizasyonu (yalnızca QLoRA için)</label>
-              </div>
-              <div class="calc-result-box">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span>Statik Bellek (Ağırlık + Gradyan + Optimizer):</span>
-                  <strong id="vramStaticGb" class="mono">0 GB</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span>Tahmini Aktivasyon + Çerçeve Payı:</span>
-                  <strong id="vramActGb" class="mono">0 GB</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:17px; padding-top:8px; border-top:1px solid var(--border);">
-                  <span>Toplam Planlama VRAM İhtiyacı:</span>
-                  <strong id="vramTotalGb" class="mono grad-text">0 GB</strong>
-                </div>
-                <p id="vramBreakdownText" class="small muted" style="margin:8px 0 0;"></p>
-                <div id="vramGpuCompat" class="gpu-compat-list"></div>
-                <p class="small muted" style="margin:10px 0 0;"><em>Şeffaflık Notu:</em> Planlama kestirimidir; kesin ölçüm için GPU'da <code>torch.cuda.max_memory_allocated()</code> kullanın.</p>
-              </div>
-            </div>
-
-            <div class="calc-panel">
-              <h3 style="margin-top:0;">2. Chinchilla Ölçekleme &amp; Eğitim FLOPs (C ≈ 6ND)</h3>
-              <div class="form-row">
-                <label for="chParamsM"><span>Hedef Model Parametresi N (Milyon — M)</span><strong id="chParamsLabel" class="mono">124 M</strong></label>
-                <input id="chParamsM" class="range-input" type="range" min="10" max="3000" step="10" value="124" />
-              </div>
-              <div class="form-row">
-                <label for="chTokensB"><span>Eğitim Veri Miktarı D (Milyar Token — B)</span><strong id="chTokensLabel" class="mono">2.5 B</strong></label>
-                <input id="chTokensB" class="range-input" type="range" min="0.1" max="100" step="0.1" value="2.5" />
-              </div>
-              <div class="form-row">
-                <label for="chHardware"><span>Karşılaştırma Donanımı (Referans Tepe TFLOPS)</span></label>
-                <select id="chHardware" class="select" style="width:100%;">
-                  <option value="65">1× NVIDIA T4 (Colab/Kaggle — ~65 TFLOPS FP16 tepe)</option>
-                  <option value="130">2× NVIDIA T4 (Kaggle Dual — ~130 TFLOPS FP16 tepe)</option>
-                  <option value="312">1× NVIDIA A100 80GB (~312 TFLOPS BF16 Tensor Core tepe)</option>
-                  <option value="989">1× NVIDIA H100 SXM (~989 TFLOPS BF16 tepe)</option>
-                  <option value="7912">8× NVIDIA H100 Node (~7912 TFLOPS BF16 tepe)</option>
-                </select>
-              </div>
-              <div class="form-row">
-                <label for="chMfu"><span>Model FLOPs Kullanım Oranı (MFU Varsayımı)</span><strong id="chMfuLabel" class="mono">%35</strong></label>
-                <input id="chMfu" class="range-input" type="range" min="15" max="55" step="1" value="35" />
-              </div>
-              <div class="calc-result-box">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span>Chinchilla Optimal Token Önerisi (≈ 20N):</span>
-                  <strong id="chOptimalTokens" class="mono">0 B Token</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span>Toplam Hesaplama (C ≈ 6 × N × D):</span>
-                  <strong id="chTotalFlops" class="mono">0 FLOPs</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:17px; padding-top:8px; border-top:1px solid var(--border);">
-                  <span>Tahmini Eğitim Süresi:</span>
-                  <strong id="chEstHours" class="mono grad-text">0 saat</strong>
-                </div>
-                <p id="chRatioNote" class="small" style="margin:10px 0 0;"></p>
-                <p class="small muted" style="margin:8px 0 0;"><em>MFU Varsayımı:</em> Gerçek MFU donanım bant genişliği, FlashAttention ve batch boyutuna göre %25–%50 arası değişir.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 5. SIFIR BÜTÇE & ÜCRETSİZ GPU -->
-        <section id="tab-sifir-butce" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Donanım &amp; Hibe Stratejisi</div>
-            <h2>Sıfır Bütçe: Ücretsiz GPU, Öğrenci Kredileri &amp; Ulusal Altyapı</h2>
-            <p>Doğrulanmış ücretsiz platform kotaları, oturum sınırları ve üniversite öğrencisi olmanın açtığı akademik GPU/TPU imkânları.</p>
-          </div>
-          <div id="freeComputeGrid" class="grid-2"></div>
-          <h3 class="sub-heading">4 Basamaklı Sıfır-Bütçe Deney Merdiveni</h3>
-          <div id="zeroBudgetLadder" class="grid-2"></div>
-        </section>
-
-        <!-- 6. AI ARAÇLARINI BİLİMSEL KULLANMA -->
-        <section id="tab-ai-kullanim" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Bilimsel Öğrenme Protokolü</div>
-            <h2>Premium AI Araçlarını Öğrenmeyi Bozmadan Kullanma</h2>
-            <p id="aiTutorIntro"></p>
-          </div>
-          <h3 class="sub-heading">Hakemli Bilimsel Kanıtlar (PNAS 2025 &amp; Harvard *Scientific Reports* 2025)</h3>
-          <div id="aiStudiesGrid" class="grid-2"></div>
-          <h3 class="sub-heading">5 Altın Kullanım Kuralı</h3>
-          <div id="aiRulesList" class="card" style="margin-bottom:20px;"></div>
-          <div class="card border-brand-gradient">
-            <div class="card-head">
-              <div>
-                <h3 class="card-title">Kopyalanabilir "Sokratik AI Eğitmen" Sistem İstemi</h3>
-                <p class="card-meta">Premium AI araçlarınızda yeni bir Proje / Custom Instruction açıp bunu yapıştırın.</p>
-              </div>
-              <button id="copyPromptBtn" class="btn btn-primary btn-xs" type="button">İstemi Kopyala</button>
-            </div>
-            <pre id="socraticPromptText" class="prompt-box"></pre>
-          </div>
-        </section>
-
-        <!-- 7. 5 KİŞİLİK EKİP PLANI -->
-        <section id="tab-ekip-plani" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Ekip Koordinasyonu</div>
-            <h2>5 Üniversiteli İçin Uzmanlık Rolleri &amp; 12 Aylık Faz Planı</h2>
-            <p>Ortak Faz 0 temelinden sonra 5 net teknik rol paylaşımıyla birbirini tamamlayan mühendislik yapısı kurun.</p>
-          </div>
-          <h3 class="sub-heading">5 Uzmanlık Rolü ve İlk Ay Görevleri</h3>
-          <div id="teamRolesGrid" class="grid-3"></div>
-          <h3 class="sub-heading">Faz 0 → Faz 4: 12 Aylık Aşamalı Mühendislik Takvimi</h3>
-          <div id="teamPhasesList" class="grid-2"></div>
-        </section>
-
-        <!-- 8. NİTELİK DENETİMİ -->
-        <section id="tab-kaynak-denetimi" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Şeffaflık &amp; Güvenilirlik</div>
-            <h2>Hakemli Olmayan Kaynaklar — Yazar &amp; Kurum Nitelik Karnesi</h2>
-            <p>Her blog, playbook, kitap, açık kurs ve GitHub deposunun yazar kimliği, akademik/sektör geçmişi ve dürüst kısıt notları.</p>
-          </div>
-          <div class="toolbar">
-            <input id="auditSearch" class="input input-search" type="search" placeholder="Yazar, kurum, kaynak veya kısıt ara (örn. Karpathy, Stanford, fast.ai)..." />
-            <select id="auditCategorySelect" class="select"><option value="all">Tüm Kategoriler</option></select>
-            <span id="auditCountBadge" class="badge badge-neutral">0 kaynak</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:22%;">Kaynak &amp; Tür</th>
-                  <th style="width:42%;">Yazar / Kurum &amp; Doğrulanmış Nitelikleri</th>
-                  <th style="width:36%;">Dürüst Kısıt &amp; Kullanım Notu</th>
-                </tr>
-              </thead>
-              <tbody id="auditTableBody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- 9. TAM KÜTÜPHANE -->
-        <section id="tab-kutuphane" class="tab-panel">
-          <div class="section-hero">
-            <div class="eyebrow">Akıllı Filtreleme &amp; Seçim</div>
-            <h2>Doğrulanmış Tüm Kaynaklar Kütüphanesi</h2>
-            <p>Her kartı <strong>Başlanmadı / Çalışıyorum / Tamamlandı</strong> olarak işaretle, favoriye ekle (★), kişisel notunu tut ve profil rolüne göre önerilenleri süz.</p>
-          </div>
-
-          <div class="toolbar" style="flex-direction:column; align-items:stretch;">
-            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-              <input id="libSearch" class="input input-search" type="search" placeholder="Başlık, yazar, arXiv/konu ara..." />
-              <select id="libCategorySelect" class="select"><option value="all">Tüm Kategoriler</option></select>
-              <select id="libTypeSelect" class="select"><option value="all">Tüm Türler</option></select>
-              <select id="libLevelSelect" class="select">
-                <option value="all">Tüm Seviyeler</option>
-                <option value="Başlangıç">Başlangıç</option>
-                <option value="Temel">Temel</option>
-                <option value="Orta">Orta</option>
-                <option value="İleri">İleri</option>
+              <input id="timelineSearch" class="input input-search" type="search" placeholder="Makale, yazar, yıl veya kavram ara..." />
+              <select id="timelineEraFilter" class="select">
+                <option value="all">Tüm Dönemler</option>
+                <option value="classic">1943–1998 Klasikler</option>
+                <option value="dl-breakthrough">2010–2016 Derin Öğrenme</option>
+                <option value="transformer-era">2017–2023 Transformer</option>
+                <option value="frontier-2026">2024–2026 Açık Bilim</option>
               </select>
-              <select id="libRoleSelect" class="select">
+              <select id="timelineRoleFilter" class="select">
                 <option value="all">Tüm Roller</option>
                 <option value="ortak">Ortak Çekirdek</option>
                 <option value="mimari">Mimari &amp; Mat.</option>
@@ -478,50 +290,357 @@
                 <option value="posttraining">Post-Training &amp; RL</option>
                 <option value="eval">Eval &amp; Servis</option>
               </select>
+              <span id="timelineCountBadge" class="badge badge-neutral">0 makale</span>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center;">
-              <div id="libStatusChips" class="chip-group">
-                <button class="chip active" data-status="all" type="button">Tümü</button>
-                <button class="chip" data-status="doing" type="button">Çalışıyorum</button>
-                <button class="chip" data-status="done" type="button">Tamamlandı</button>
-                <button class="chip" data-status="todo" type="button">Başlanmadı</button>
-                <button class="chip" data-status="starred" type="button">★ Favoriler</button>
-                <button id="libRecommendedBtn" class="chip" data-status="recommended" type="button">✨ Senin İçin Önerilen</button>
+            <div id="timelineList" class="timeline-list"></div>
+
+            <h3 class="sub-heading">Bütüncül Tarihçe Kitapları &amp; Raporları</h3>
+            <div id="historySynthesisGrid" class="grid-2"></div>
+          </div>
+        </section>
+
+        <!-- 4. ARAÇLAR & EKİP -->
+        <section id="tab-araclar" class="tab-panel">
+          <div class="section-hero">
+            <div class="eyebrow">Mühendislik &amp; Koordinasyon</div>
+            <h2>Hesaplayıcılar, Ücretsiz GPU, Sokratik AI &amp; Ekip Planı</h2>
+            <p>Model boyutunu ve VRAM ihtiyacını hesapla, ücretsiz GPU seçeneklerini gör, AI araçlarını doğru kullan ve 5 kişilik ekip rollerini incele.</p>
+          </div>
+
+          <div class="sub-pills" role="tablist" aria-label="Araçlar alt sekmeleri">
+            <button class="sub-pill active" data-subtab-group="araclar" data-subtab="sub-tools-calc" type="button" role="tab" aria-selected="true">VRAM &amp; Chinchilla</button>
+            <button class="sub-pill" data-subtab-group="araclar" data-subtab="sub-tools-compute" type="button" role="tab" aria-selected="false">Ücretsiz GPU &amp; Hibe</button>
+            <button class="sub-pill" data-subtab-group="araclar" data-subtab="sub-tools-ai" type="button" role="tab" aria-selected="false">AI Araçları &amp; Sokrat</button>
+            <button class="sub-pill" data-subtab-group="araclar" data-subtab="sub-tools-team" type="button" role="tab" aria-selected="false">5 Kişilik Ekip</button>
+          </div>
+
+          <div id="sub-tools-calc" class="sub-panel active">
+            <div class="calc-grid">
+              <div class="calc-panel">
+                <h3 class="calc-title">1. GPU VRAM &amp; Donanım Uygunluk Hesaplayıcısı</h3>
+                <div class="form-row">
+                  <label for="vramPreset"><span>Hazır Model Profili</span></label>
+                  <select id="vramPreset" class="select full-width">
+                    <option value="custom">Özel Ayar (Manuel)</option>
+                    <option value="tinystories10m">TinyStories 10M (Sıfırdan Deney)</option>
+                    <option value="gpt2-124m">GPT-2 Small 124M (Klasik Sıfırdan)</option>
+                    <option value="llama1b">Llama-3.2 1B (Orta Ölçek)</option>
+                    <option value="qwen7b-qlora">Qwen2.5 7B (4-bit QLoRA İnce Ayar)</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="vramParamsM">
+                    <span>Model Parametre Sayısı (Milyon)</span>
+                    <strong id="vramParamsLabel" class="mono">124 M</strong>
+                  </label>
+                  <input id="vramParamsM" class="range-input" type="range" min="5" max="14000" step="5" value="124" />
+                </div>
+                <div class="form-row">
+                  <label for="vramMode"><span>Eğitim Modu</span></label>
+                  <select id="vramMode" class="select full-width">
+                    <option value="mixed">Sıfırdan Eğitim — Mixed Precision (BF16/FP16) + AdamW</option>
+                    <option value="fp32">Sıfırdan Eğitim — Tam FP32 + AdamW</option>
+                    <option value="qlora">İnce Ayar — 4-bit QLoRA</option>
+                  </select>
+                </div>
+                <div class="grid-2 calc-mini-grid">
+                  <div class="form-row">
+                    <label for="vramBatch"><span>Mikro Batch (b)</span></label>
+                    <input id="vramBatch" class="input full-width" type="number" min="1" max="128" value="4" />
+                  </div>
+                  <div class="form-row">
+                    <label for="vramSeq"><span>Bağlam (s)</span></label>
+                    <input id="vramSeq" class="input full-width" type="number" min="128" max="8192" step="128" value="512" />
+                  </div>
+                  <div class="form-row">
+                    <label for="vramHidden"><span>Gizli Boyut (d_model)</span></label>
+                    <input id="vramHidden" class="input full-width" type="number" min="128" max="8192" step="64" value="768" />
+                  </div>
+                  <div class="form-row">
+                    <label for="vramLayers"><span>Katman (L)</span></label>
+                    <input id="vramLayers" class="input full-width" type="number" min="2" max="80" value="12" />
+                  </div>
+                </div>
+                <div class="calc-checks">
+                  <label class="done-check"><input id="vramGradCkpt" type="checkbox" checked /> Gradient Checkpointing (~%70 aktivasyon tasarrufu)</label>
+                  <label class="done-check"><input id="vramUnsloth" type="checkbox" /> Unsloth Kernel Optimizasyonu (QLoRA)</label>
+                </div>
+                <div class="calc-result-box">
+                  <div class="calc-row">
+                    <span>Statik Bellek (Ağırlık + Gradyan + Optimizer):</span>
+                    <strong id="vramStaticGb" class="mono">0 GB</strong>
+                  </div>
+                  <div class="calc-row">
+                    <span>Aktivasyon + Çerçeve Payı:</span>
+                    <strong id="vramActGb" class="mono">0 GB</strong>
+                  </div>
+                  <div class="calc-row calc-row-total">
+                    <span>Toplam Tahmini VRAM:</span>
+                    <strong id="vramTotalGb" class="mono grad-text">0 GB</strong>
+                  </div>
+                  <p id="vramBreakdownText" class="small muted mt-sm"></p>
+                  <div id="vramGpuCompat" class="gpu-compat-list"></div>
+                </div>
               </div>
-              <span id="libCountBadge" class="badge badge-neutral">0 kaynak</span>
+
+              <div class="calc-panel">
+                <h3 class="calc-title">2. Chinchilla Ölçekleme &amp; Eğitim Süresi (C ≈ 6ND)</h3>
+                <div class="form-row">
+                  <label for="chParamsM">
+                    <span>Model Parametresi N (Milyon)</span>
+                    <strong id="chParamsLabel" class="mono">124 M</strong>
+                  </label>
+                  <input id="chParamsM" class="range-input" type="range" min="5" max="14000" step="5" value="124" />
+                </div>
+                <div class="form-row">
+                  <label for="chTokensB">
+                    <span>Eğitim Veri Miktarı D (Milyar Token)</span>
+                    <strong id="chTokensLabel" class="mono">2.5 B</strong>
+                  </label>
+                  <input id="chTokensB" class="range-input" type="range" min="0.1" max="300" step="0.1" value="2.5" />
+                </div>
+                <div class="form-row">
+                  <label for="chHardware"><span>Referans GPU Donanımı</span></label>
+                  <select id="chHardware" class="select full-width">
+                    <option value="65">1× NVIDIA T4 (Colab/Kaggle — ~65 TFLOPS)</option>
+                    <option value="19">1× NVIDIA GTX/RTX Giriş (~19 TFLOPS)</option>
+                    <option value="165">1× NVIDIA L4 / RTX 4090 (~165 TFLOPS)</option>
+                    <option value="312">1× NVIDIA A100 80GB (~312 TFLOPS)</option>
+                    <option value="989">1× NVIDIA H100 SXM (~989 TFLOPS)</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="chMfu">
+                    <span>MFU Kullanım Oranı</span>
+                    <strong id="chMfuLabel" class="mono">%35</strong>
+                  </label>
+                  <input id="chMfu" class="range-input" type="range" min="10" max="75" step="1" value="35" />
+                </div>
+                <div class="calc-result-box">
+                  <div class="calc-row">
+                    <span>Chinchilla Optimal Token (≈ 20N):</span>
+                    <strong id="chOptimalTokens" class="mono">0 B Token</strong>
+                  </div>
+                  <div class="calc-row">
+                    <span>Toplam Hesaplama (C ≈ 6ND):</span>
+                    <strong id="chTotalFlops" class="mono">0 FLOPs</strong>
+                  </div>
+                  <div class="calc-row calc-row-total">
+                    <span>Tahmini Eğitim Süresi:</span>
+                    <strong id="chEstHours" class="mono grad-text">0 saat</strong>
+                  </div>
+                  <p id="chRatioNote" class="small mt-sm"></p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div id="libraryGrid" class="grid-2"></div>
+          <div id="sub-tools-compute" class="sub-panel">
+            <div id="computeGrid" class="grid-2"></div>
+            <h3 class="sub-heading">4 Basamaklı Sıfır-Bütçe Deney Merdiveni</h3>
+            <div id="computeLadder" class="grid-2"></div>
+          </div>
+
+          <div id="sub-tools-ai" class="sub-panel">
+            <p id="aiTutorIntro" class="muted"></p>
+            <h3 class="sub-heading">Hakemli Bilimsel Kanıtlar</h3>
+            <div id="aiStudiesGrid" class="grid-2"></div>
+            <h3 class="sub-heading">5 Altın Kullanım Kuralı</h3>
+            <div id="aiRulesList" class="card"></div>
+            <div class="card border-brand-gradient mt-lg">
+              <div class="card-head">
+                <div>
+                  <h3 class="card-title">Kopyalanabilir "Sokratik AI Eğitmen" Sistem İstemi</h3>
+                  <p class="card-meta">Kullandığın AI aracında Custom Instruction / Proje talimatına yapıştır.</p>
+                </div>
+                <button id="copyPromptBtn" class="btn btn-primary btn-xs" type="button">İstemi Kopyala</button>
+              </div>
+              <pre id="socraticPromptText" class="prompt-box"></pre>
+            </div>
+            <h3 class="sub-heading">Takıldığında Kullanabileceğin Hazır İstemler</h3>
+            <div id="stuckPromptsGrid" class="grid-2"></div>
+          </div>
+
+          <div id="sub-tools-team" class="sub-panel">
+            <h3 class="sub-heading">5 Uzmanlık Rolü</h3>
+            <div id="teamRolesGrid" class="grid-3"></div>
+            <h3 class="sub-heading">Faz Bazlı Ekip Takvimi</h3>
+            <div id="teamPhasesGrid" class="grid-2"></div>
+            <p class="footer-note">Veri Etiği İlkesi: Yalnızca açık lisanslı (CC-BY, MIT, Apache-2.0, kamu malı) ve kişisel veri içermeyen veri setleriyle çalışın; telifli/izinsiz içerik toplamayın.</p>
+          </div>
+        </section>
+
+        <!-- 5. KÜTÜPHANE & DENETİM -->
+        <section id="tab-kutuphane" class="tab-panel">
+          <div class="section-hero">
+            <div class="eyebrow">Doğrulanmış Kaynak Arşivi</div>
+            <h2>Tam Kütüphane &amp; Nitelik Denetimi</h2>
+            <p>Tüm makaleleri, kitapları ve açık kursları filtrele; hakemli olmayan kaynakların yazar ve kurum niteliklerini şeffafça incele.</p>
+          </div>
+
+          <div class="sub-pills" role="tablist" aria-label="Kütüphane alt sekmeleri">
+            <button class="sub-pill active" data-subtab-group="kutuphane" data-subtab="sub-lib-all" type="button" role="tab" aria-selected="true">Tüm Kaynaklar</button>
+            <button class="sub-pill" data-subtab-group="kutuphane" data-subtab="sub-lib-audit" type="button" role="tab" aria-selected="false">Nitelik Denetimi</button>
+          </div>
+
+          <div id="sub-lib-all" class="sub-panel active">
+            <div class="toolbar">
+              <input id="libSearch" class="input input-search" type="search" placeholder="Başlık, yazar, arXiv veya konu ara..." />
+              <select id="libCategoryFilter" class="select">
+                <option value="all">Tüm Kategoriler</option>
+              </select>
+              <select id="libLevelFilter" class="select">
+                <option value="all">Tüm Seviyeler</option>
+              </select>
+              <select id="libRoleFilter" class="select">
+                <option value="all">Tüm Roller</option>
+                <option value="ortak">Ortak Çekirdek</option>
+                <option value="mimari">Mimari &amp; Mat.</option>
+                <option value="veri">Veri &amp; Tokenizer</option>
+                <option value="sistem">GPU &amp; Sistem</option>
+                <option value="posttraining">Post-Training &amp; RL</option>
+                <option value="eval">Eval &amp; Servis</option>
+              </select>
+              <button id="libBookmarkOnlyBtn" class="btn btn-xs" type="button" aria-pressed="false">★ Favoriler</button>
+              <span id="libCountBadge" class="badge badge-neutral">0 kaynak</span>
+            </div>
+            <div id="libraryGrid" class="grid-2"></div>
+          </div>
+
+          <div id="sub-lib-audit" class="sub-panel">
+            <div class="toolbar">
+              <input id="auditSearch" class="input input-search" type="search" placeholder="Yazar, kurum veya kaynak ara..." />
+              <select id="auditTierFilter" class="select">
+                <option value="all">Tüm Nitelik Düzeyleri</option>
+                <option value="peer-reviewed">Hakemli (Peer-Reviewed)</option>
+                <option value="non-peer-reviewed">Hakemli Olmayan</option>
+                <option value="institution">Kurum / Laboratuvar</option>
+              </select>
+              <span id="auditCountBadge" class="badge badge-neutral">0 kaynak</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:24%;">Kaynak &amp; Tür</th>
+                    <th style="width:40%;">Yazar / Kurum &amp; Doğrulanmış Nitelikleri</th>
+                    <th style="width:36%;">Dürüst Kısıt &amp; Kullanım Notu</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
       </main>
     </div>
   </div>
 
-  <!-- Lintu Maskot Tanıtım Turu Modalı -->
-  <div id="mascotTourModal" class="tour-backdrop" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
-    <div class="tour-modal">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span id="tourEyebrow" class="eyebrow">Adım 1 / 6</span>
-        <button id="tourCloseBtn" class="btn btn-xs" type="button" aria-label="Turu kapat">✕ Kapat</button>
+  <!-- Zahmetsiz İlerleme & Yedek Modalı -->
+  <div id="progressModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle" hidden>
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow">Profil, Senkronizasyon &amp; Yedek</div>
+          <h3 id="progressModalTitle" class="modal-title">İlerleme &amp; Ekip Yedeği</h3>
+        </div>
+        <button id="closeProgressModalBtn" class="btn btn-xs" type="button" aria-label="Modalı kapat">✕ Kapat</button>
       </div>
-      <div class="tour-hero">
-        <img class="tour-mascot-img animate-float" src="./assets/brand/mascot.png" alt="Lintu maskotu" />
-        <div class="speech-bubble border-brand-gradient animate-pop">
-          <h3 id="tourTitle" style="margin:0 0 6px; font-size:1.25rem;">Merhaba, ben Lintu!</h3>
-          <p id="tourSay" style="margin:0; font-size:14px;"></p>
+
+      <div class="modal-profile-row">
+        <div class="form-row">
+          <label for="modalMemberSelect"><span>Ekip Üyesi</span></label>
+          <div class="inline-row">
+            <select id="modalMemberSelect" class="select full-width"></select>
+            <button id="modalAddMemberBtn" class="btn btn-xs" type="button">+ Üye</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="modalRoleSelect"><span>Odak Rolü</span></label>
+          <select id="modalRoleSelect" class="select full-width">
+            <option value="ortak">Ortak Çekirdek</option>
+            <option value="mimari">Mimari &amp; Mat.</option>
+            <option value="veri">Veri &amp; Tokenizer</option>
+            <option value="sistem">GPU &amp; Sistem</option>
+            <option value="posttraining">Post-Training &amp; RL</option>
+            <option value="eval">Eval &amp; Servis</option>
+          </select>
         </div>
       </div>
-      <div class="tour-preview-box">
-        <div id="tourPreviewTitle" class="eyebrow" style="color:var(--brand); margin-bottom:6px;"></div>
-        <ul id="tourPreviewList" style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px;"></ul>
+
+      <div id="modalOverallStats" class="modal-stats-strip"></div>
+
+      <div class="modal-bars-grid">
+        <div>
+          <h4 class="modal-subhead">Seviye İlerlemesi</h4>
+          <div id="modalLevelBars" class="bars-stack"></div>
+        </div>
+        <div>
+          <h4 class="modal-subhead">Çeyrek Dönem İlerlemesi</h4>
+          <div id="modalQuarterBars" class="bars-stack"></div>
+        </div>
+      </div>
+
+      <div class="sync-code-box">
+        <div class="sync-box-head">
+          <div>
+            <h4 class="modal-subhead" style="margin:0;">Cihazlar Arası Senkronizasyon Kodu</h4>
+            <p class="small muted" style="margin:2px 0 0;">Kodu veya bağlantıyı kopyalayıp diğer cihazda uygula.</p>
+          </div>
+          <div class="inline-row">
+            <button id="copySyncCodeBtn" class="btn btn-primary btn-xs" type="button">Kodu Kopyala</button>
+            <button id="copySyncLinkBtn" class="btn btn-xs" type="button">Bağlantı Kopyala</button>
+          </div>
+        </div>
+        <textarea id="syncCodeOutput" class="input sync-textarea" rows="2" readonly aria-label="Senkronizasyon kodu"></textarea>
+        <div class="inline-row mt-sm">
+          <input id="syncCodeInput" class="input full-width" type="text" placeholder="Başka cihazdan aldığın kodu buraya yapıştır..." aria-label="Senkronizasyon kodu gir" />
+          <button id="applySyncCodeBtn" class="btn btn-xs" type="button">Uygula</button>
+        </div>
+        <p id="syncFeedback" class="small muted sync-feedback"></p>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button id="exportObsidianBtn" class="btn btn-xs" type="button">Obsidian .md İndir</button>
+        <button id="exportJsonBtn" class="btn btn-xs" type="button">JSON Yedek İndir</button>
+        <label class="btn btn-xs" for="importJsonInput">
+          JSON İçe Aktar
+          <input id="importJsonInput" type="file" accept="application/json" hidden />
+        </label>
+        <button id="resetProgressBtn" class="btn btn-xs btn-danger" type="button">İlerlemeyi Sıfırla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lintu Maskot Dock -->
+  <div class="mascot-dock" aria-live="polite">
+    <div class="mascot-tip-bubble">
+      <p id="mascotTipText" class="mascot-tip-text">Hoş geldin! İlk adım için 0. Başlangıç sekmesinden 7 günlük plana göz atabilirsin.</p>
+      <button id="mascotOpenTourBtn" class="btn btn-xs" type="button">Turu Aç</button>
+    </div>
+    <button id="mascotDockBtn" class="mascot-dock-btn" type="button" aria-label="Lintu rehber ipucunu göster">
+      <img src="./assets/brand/mascot-head.png" alt="Lintu maskotu" />
+      <span>Lintu</span>
+    </button>
+  </div>
+
+  <!-- Lintu Tanıtım Turu Overlay -->
+  <div id="tourOverlay" class="modal-overlay tour-overlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle" hidden>
+    <div class="modal-sheet tour-sheet">
+      <div class="tour-header">
+        <span id="tourProgressLabel" class="eyebrow">Adım 1 / 5</span>
+        <button id="tourSkipBtn" class="btn btn-xs" type="button">Turu Atla</button>
+      </div>
+      <div class="tour-body-row">
+        <img class="tour-mascot-img animate-float" src="./assets/brand/mascot.png" alt="Lintu maskotu" />
+        <div class="speech-bubble">
+          <h3 id="tourTitle" class="tour-title">Merhaba, ben Lintu!</h3>
+          <div id="tourBody" class="tour-body-text"></div>
+        </div>
       </div>
       <div class="tour-controls">
         <div id="tourDots" class="tour-dots" role="tablist" aria-label="Tur adımları"></div>
-        <label class="done-check" style="margin-right:auto;">
-          <input id="tourDontShowCheck" type="checkbox" /> Otomatik açmayı kapat
-        </label>
-        <div style="display:flex; gap:8px;">
+        <div class="inline-row">
           <button id="tourPrevBtn" class="btn btn-xs" type="button">← Geri</button>
           <button id="tourNextBtn" class="btn btn-primary btn-xs" type="button">İleri →</button>
         </div>
@@ -529,20 +648,6 @@
     </div>
   </div>
 
-  <!-- Sağ Altta Yüzen Lintu Rehber Balonu -->
-  <div id="mascotPopover" class="mascot-popover border-brand-gradient" role="region" aria-label="Lintu bağlamsal ipucu">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <span class="eyebrow">Lintu İpucu</span>
-      <button id="mascotPopoverClose" class="btn btn-xs" type="button" aria-label="İpucunu gizle">✕</button>
-    </div>
-    <p id="mascotPopoverText" style="margin:0 0 10px; font-size:13.2px;"></p>
-    <div style="display:flex; justify-content:flex-end; gap:6px;">
-      <button id="mascotPopoverTourBtn" class="btn btn-xs" type="button">6 Adımlı Turu İzle</button>
-    </div>
-  </div>
-  <button id="mascotFab" class="mascot-fab" type="button" aria-label="Lintu rehberini aç">
-    <img src="./assets/brand/mascot-head.png" alt="Lintu" />
-    <span>Lintu Rehber</span>
-  </button>
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

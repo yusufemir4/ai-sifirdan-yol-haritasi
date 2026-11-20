@@ -1,33 +1,21 @@
-/* Lintu AI Yol Haritası (v2) — Etkileşimli Uygulama Mantığı
+/* Lintu AI Yol Haritası (v3) — Sade, Modüler & Çift Kayıtlı Uygulama Mantığı
  * Harici kütüphane yoktur; ES module kullanılmaz, file:// ve GitHub Pages uyumludur.
  */
-
 (function () {
   "use strict";
 
-  const DATA = window.ROADMAP_DATA;
-  if (!DATA) {
-    console.error("ROADMAP_DATA yüklenemedi.");
-    return;
-  }
+  const HAS_WINDOW = typeof window !== "undefined";
+  const HAS_DOC = typeof document !== "undefined";
+  const DATA = HAS_WINDOW ? window.ROADMAP_DATA : null;
 
+  const STORAGE_KEY_V3 = "ai_roadmap_v3";
   const STORAGE_KEY_V2 = "ai_roadmap_state_v2";
-  const STORAGE_KEY_V1 = "ai_roadmap_done_v1";
-  const STORAGE_KEY_THEME = "ai_roadmap_theme_v1";
-  const STORAGE_KEY_TOUR = "ai_roadmap_tour_seen_v2";
+  const STORAGE_KEY_THEME = "ai_roadmap_theme_v3";
+  const STORAGE_KEY_TOUR = "ai_roadmap_tour_seen_v3";
 
-  const TAB_TITLES = {
-    "baslangic": "0. Sıfırdan Başla, Yardım Al & 28 Temel Terim",
-    "genel-bakis": "1. Genel Bakış & Dürüst Gerçeklik Kontrolü",
-    "tarih": "2. Olay Örgüsü (7 Perde) & Kronolojik Tarih",
-    "altyapi": "3. İşlevsel Teknik Altyapı (10 Modül)",
-    "hesaplayicilar": "4. GPU VRAM & Chinchilla / FLOPs Hesaplayıcıları",
-    "sifir-butce": "5. Sıfır Bütçe Stratejisi & Ücretsiz GPU Kaynakları",
-    "ai-kullanim": "6. AI Araçlarını Bilimsel Kullanma & Sokratik İstem",
-    "ekip-plani": "7. 5 Kişilik Ekip Rolleri & 12 Aylık Faz Planı",
-    "kaynak-denetimi": "8. Hakemli Olmayan Kaynaklar — Yazar & Nitelik Karnesi",
-    "kutuphane": "9. Doğrulanmış Tüm Kaynaklar Kütüphanesi"
-  };
+  const IDB_NAME = "lintu_roadmap_db_v3";
+  const IDB_STORE = "state";
+  const IDB_KEY = "app_state";
 
   const ROLE_LABELS = {
     ortak: "Ortak Çekirdek",
@@ -38,25 +26,51 @@
     eval: "Eval & Servis"
   };
 
-  const LEVEL_ORDER = {
-    "Başlangıç": 0,
-    "Temel": 1,
-    "Orta": 2,
-    "İleri": 3
+  const TAB_TITLES = {
+    baslangic: "0. Sıfırdan Başla, Yardım & 28 Temel Terim",
+    seviyeler: "1. Seviyeler & Müfredat (6 Seviye · 24 Konu)",
+    takvim: "2. 12 Aylık Yıllık & Aylık Takvim (48 Hafta)",
+    tarih: "3. Olay Örgüsü (7 Perde) & Kronoloji",
+    araclar: "4. Hesaplayıcılar, Ücretsiz GPU, AI & Ekip",
+    kutuphane: "5. Doğrulanmış Kaynak Kütüphanesi & Denetim"
   };
 
-  let appState = loadAppState();
-  let activeTimelineEra = "all";
-  let activeInfraRole = "all";
-  let activeLibStatus = "all";
-  let currentTabId = "genel-bakis";
+  const TR_MONTHS = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+  ];
+
+  const DEFAULT_TOPIC_IDS = [
+    "t-0-1", "t-0-2", "t-0-3", "t-0-4",
+    "t-1-1", "t-1-2", "t-1-3", "t-1-4",
+    "t-2-1", "t-2-2", "t-2-3", "t-2-4",
+    "t-3-1", "t-3-2", "t-3-3", "t-3-4",
+    "t-4-1", "t-4-2", "t-4-3", "t-4-4",
+    "t-5-1", "t-5-2", "t-5-3", "t-5-4"
+  ];
+
+  const DEFAULT_WEEK_IDS = Array.from({ length: 12 }, (_, mIdx) => {
+    const mStr = String(mIdx + 1).padStart(2, "0");
+    return [1, 2, 3, 4].map((w) => `m${mStr}-w${w}`);
+  }).flat();
+
+  const VRAM_PRESETS = {
+    tinystories10m: { paramsM: 10, mode: "mixed", batch: 8, seq: 512, hidden: 256, layers: 6, gradCkpt: false, unsloth: false },
+    "gpt2-124m": { paramsM: 124, mode: "mixed", batch: 4, seq: 512, hidden: 768, layers: 12, gradCkpt: true, unsloth: false },
+    llama1b: { paramsM: 1000, mode: "mixed", batch: 2, seq: 1024, hidden: 2048, layers: 16, gradCkpt: true, unsloth: false },
+    "qwen7b-qlora": { paramsM: 7000, mode: "qlora", batch: 2, seq: 1024, hidden: 3584, layers: 28, gradCkpt: true, unsloth: true }
+  };
+
+  let appState = loadInitialState();
+  let currentTabId = "baslangic";
+  let activeLevelId = "all";
+  let calViewMode = "annual";
+  let selectedCalMonth = 1;
+  let histViewMode = "story";
+  let libBookmarkOnly = false;
   let tourStepIndex = 0;
 
-  // File System Access API tutamacı (oturum süresince gerçek yerel dosyaya oto-kayıt)
-  let localFileHandle = null;
-  let localFileName = "";
-  let localSaveTimer = null;
-
+  /* ---------- Yardımcılar ---------- */
   function escapeHtml(str) {
     if (str === null || str === undefined) return "";
     return String(str)
@@ -67,68 +81,114 @@
       .replace(/'/g, "&#39;");
   }
 
-  function createEmptyProfile(role, level) {
+  function $(id) {
+    return HAS_DOC ? document.getElementById(id) : null;
+  }
+
+  function getTopicIds() {
+    if (DATA && Array.isArray(DATA.LEVEL_GROUPS) && DATA.LEVEL_GROUPS.length) {
+      return DATA.LEVEL_GROUPS.flatMap((lvl) => (lvl.topics || []).map((t) => t.id));
+    }
+    return DEFAULT_TOPIC_IDS;
+  }
+
+  function getWeekIds() {
+    if (DATA && Array.isArray(DATA.ANNUAL_CALENDAR) && DATA.ANNUAL_CALENDAR.length) {
+      return DATA.ANNUAL_CALENDAR.flatMap((m) => (m.weeks || []).map((w) => w.id));
+    }
+    return DEFAULT_WEEK_IDS;
+  }
+
+  function getResourceMap() {
+    const map = {};
+    if (DATA && Array.isArray(DATA.ALL_RESOURCES)) {
+      DATA.ALL_RESOURCES.forEach((r) => { map[r.id] = r; });
+    }
+    return map;
+  }
+
+  function createEmptyMember(role) {
     return {
-      role: role || "ortak",
-      level: level || "Başlangıç",
-      statuses: {},
-      stars: {},
-      notes: {}
+      role: ROLE_LABELS[role] ? role : "ortak",
+      topics: {},
+      weeks: {},
+      bookmarks: {}
     };
+  }
+
+  function cleanBoolMap(obj) {
+    const out = {};
+    if (!obj || typeof obj !== "object") return out;
+    Object.keys(obj).forEach((k) => {
+      if (obj[k]) out[k] = true;
+    });
+    return out;
   }
 
   function normalizeState(raw) {
     const base = {
-      version: 2,
-      activeProfile: "Yusuf",
-      profiles: {
-        Yusuf: createEmptyProfile("ortak", "Başlangıç")
+      activeMember: "Yusuf",
+      startMonth: "2026-11",
+      members: {
+        Yusuf: createEmptyMember("ortak")
       }
     };
     if (!raw || typeof raw !== "object") return base;
 
-    // Eğer eski v1 formatı geldiyse dönüştür
-    if (Array.isArray(raw)) {
-      raw.forEach((k) => { base.profiles.Yusuf.statuses[String(k)] = "done"; });
-      return base;
-    }
-    if (Array.isArray(raw.done) && !raw.profiles) {
-      raw.done.forEach((k) => { base.profiles.Yusuf.statuses[String(k)] = "done"; });
-      return base;
+    if (raw.startMonth === "relative" || /^\d{4}-\d{2}$/.test(String(raw.startMonth || ""))) {
+      base.startMonth = String(raw.startMonth);
     }
 
-    if (raw.profiles && typeof raw.profiles === "object") {
-      base.profiles = {};
-      Object.entries(raw.profiles).forEach(([name, prof]) => {
+    if (raw.members && typeof raw.members === "object") {
+      const nextMembers = {};
+      Object.entries(raw.members).forEach(([name, m]) => {
         const cleanName = String(name).trim() || "Üye";
-        base.profiles[cleanName] = {
-          role: prof && ROLE_LABELS[prof.role] ? prof.role : "ortak",
-          level: prof && prof.level in LEVEL_ORDER ? prof.level : "Başlangıç",
-          statuses: prof && prof.statuses && typeof prof.statuses === "object" ? { ...prof.statuses } : {},
-          stars: prof && prof.stars && typeof prof.stars === "object" ? { ...prof.stars } : {},
-          notes: prof && prof.notes && typeof prof.notes === "object" ? { ...prof.notes } : {}
+        nextMembers[cleanName] = {
+          role: m && ROLE_LABELS[m.role] ? m.role : "ortak",
+          topics: cleanBoolMap(m && m.topics),
+          weeks: cleanBoolMap(m && m.weeks),
+          bookmarks: cleanBoolMap(m && m.bookmarks)
         };
       });
+      if (Object.keys(nextMembers).length > 0) {
+        base.members = nextMembers;
+      }
     }
-    if (Object.keys(base.profiles).length === 0) {
-      base.profiles.Yusuf = createEmptyProfile("ortak", "Başlangıç");
-    }
-    base.activeProfile = raw.activeProfile && base.profiles[raw.activeProfile]
-      ? raw.activeProfile
-      : Object.keys(base.profiles)[0];
+
+    base.activeMember = raw.activeMember && base.members[raw.activeMember]
+      ? raw.activeMember
+      : Object.keys(base.members)[0];
+
     return base;
   }
 
-  function loadAppState() {
+  function loadInitialState() {
+    if (typeof localStorage === "undefined") {
+      return normalizeState(null);
+    }
     try {
+      const rawV3 = localStorage.getItem(STORAGE_KEY_V3);
+      if (rawV3) {
+        return normalizeState(JSON.parse(rawV3));
+      }
       const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
       if (rawV2) {
-        return normalizeState(JSON.parse(rawV2));
-      }
-      const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
-      if (rawV1) {
-        const migrated = normalizeState(JSON.parse(rawV1));
-        localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(migrated));
+        const parsedV2 = JSON.parse(rawV2);
+        const migrated = normalizeState(null);
+        if (parsedV2 && parsedV2.profiles && typeof parsedV2.profiles === "object") {
+          const members = {};
+          Object.entries(parsedV2.profiles).forEach(([name, prof]) => {
+            const cleanName = String(name).trim() || "Üye";
+            members[cleanName] = createEmptyMember(prof && prof.role);
+          });
+          if (Object.keys(members).length > 0) {
+            migrated.members = members;
+            migrated.activeMember = parsedV2.activeProfile && members[parsedV2.activeProfile]
+              ? parsedV2.activeProfile
+              : Object.keys(members)[0];
+          }
+        }
+        localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(migrated));
         return migrated;
       }
     } catch (err) {
@@ -137,818 +197,884 @@
     return normalizeState(null);
   }
 
-  function getActiveProfile() {
-    if (!appState.profiles[appState.activeProfile]) {
-      appState.profiles[appState.activeProfile] = createEmptyProfile("ortak", "Başlangıç");
+  function getActiveMember() {
+    if (!appState.members[appState.activeMember]) {
+      appState.members[appState.activeMember] = createEmptyMember("ortak");
     }
-    return appState.profiles[appState.activeProfile];
+    return appState.members[appState.activeMember];
   }
 
-  function saveAppState() {
-    try {
-      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(appState));
-    } catch (err) {
-      console.warn("localStorage kaydı başarısız:", err);
-    }
-    scheduleLocalFileSave();
+  function getState() {
+    return appState;
   }
 
-  function setLocalSaveStatus(linked, message) {
-    const dot = document.getElementById("localSaveStatusDot");
-    const txt = document.getElementById("localSaveStatusText");
-    if (dot) dot.classList.toggle("linked", Boolean(linked));
-    if (txt) txt.textContent = message;
-  }
-
-  function scheduleLocalFileSave() {
-    if (!localFileHandle) return;
-    if (localSaveTimer) clearTimeout(localSaveTimer);
-    localSaveTimer = setTimeout(() => {
-      writeLocalFileNow(false);
-    }, 300);
-  }
-
-  async function writeLocalFileNow(isManualAction) {
-    if (!localFileHandle) return false;
-    try {
-      const writable = await localFileHandle.createWritable();
-      const payload = {
-        version: 2,
-        updatedAt: new Date().toISOString(),
-        app: "Lintu AI Yol Haritası",
-        state: appState
+  /* ---------- Çift Sessiz Otomatik Kayıt (localStorage + IndexedDB) ---------- */
+  function openIdb() {
+    return new Promise((resolve, reject) => {
+      if (typeof indexedDB === "undefined") {
+        reject(new Error("indexedDB yok"));
+        return;
+      }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
       };
-      await writable.write(JSON.stringify(payload, null, 2));
-      await writable.close();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function writeIndexedDb(stateObj) {
+    if (typeof indexedDB === "undefined") return;
+    openIdb()
+      .then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(stateObj, IDB_KEY);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      }))
+      .catch(() => {});
+  }
+
+  function hydrateFromIndexedDbIfNeeded() {
+    if (typeof indexedDB === "undefined" || typeof localStorage === "undefined") return;
+    if (localStorage.getItem(STORAGE_KEY_V3)) return;
+    openIdb()
+      .then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readonly");
+        const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+        req.onsuccess = () => { db.close(); resolve(req.result); };
+        req.onerror = () => { db.close(); reject(req.error); };
+      }))
+      .then((stored) => {
+        if (stored && typeof stored === "object") {
+          appState = normalizeState(stored);
+          try {
+            localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(appState));
+          } catch (_) {}
+          refreshAllProgressUI();
+        }
+      })
+      .catch(() => {});
+  }
+
+  function saveState() {
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(appState));
+      } catch (err) {
+        console.warn("localStorage kaydı başarısız:", err);
+      }
+    }
+    writeIndexedDb(appState);
+
+    const hint = $("sidebarSaveHint");
+    if (hint) {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, "0");
       const mm = String(now.getMinutes()).padStart(2, "0");
-      setLocalSaveStatus(true, `Yerel dosya: ${localFileName} · ${hh}:${mm}`);
-      return true;
-    } catch (err) {
-      console.warn("Yerel dosyaya yazılamadı:", err);
-      localFileHandle = null;
-      setLocalSaveStatus(false, "Yerel dosya bağlantısı koptu; tarayıcı belleği aktif.");
-      if (isManualAction) {
-        downloadJsonBackup();
+      hint.textContent = `Otomatik kaydedildi · ${hh}:${mm}`;
+    }
+  }
+
+  /* ---------- Kısa Sync Kodu (LINTU3-...) ---------- */
+  function packBitmaskHex(ids, map) {
+    let hex = "";
+    for (let i = 0; i < ids.length; i += 4) {
+      let nibble = 0;
+      for (let b = 0; b < 4; b++) {
+        const id = ids[i + b];
+        if (id && map && map[id]) {
+          nibble |= (1 << b);
+        }
       }
-      return false;
+      hex += nibble.toString(16);
     }
+    return hex;
   }
 
-  async function linkLocalSaveFile() {
-    if (typeof window.showSaveFilePicker !== "function") {
-      setLocalSaveStatus(false, "Tarayıcı doğrudan dosya yazmayı desteklemiyor; JSON indiriliyor.");
-      downloadJsonBackup();
-      return;
-    }
-    try {
-      const safeName = appState.activeProfile.toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "ekip";
-      const handle = await window.showSaveFilePicker({
-        suggestedName: `lintu-ai-ilerleme-${safeName}.json`,
-        types: [{
-          description: "JSON İlerleme Dosyası",
-          accept: { "application/json": [".json"] }
-        }]
-      });
-      localFileHandle = handle;
-      localFileName = handle.name || "lintu-ai-ilerleme.json";
-      await writeLocalFileNow(true);
-    } catch (err) {
-      if (err && err.name === "AbortError") return;
-      setLocalSaveStatus(false, "Doğrudan dosya seçimi kısıtlı (file://); JSON yedeği indirildi.");
-      downloadJsonBackup();
-    }
-  }
-
-  async function openLocalSaveFile() {
-    if (typeof window.showOpenFilePicker === "function") {
-      try {
-        const [handle] = await window.showOpenFilePicker({
-          types: [{
-            description: "JSON İlerleme Dosyası",
-            accept: { "application/json": [".json"] }
-          }]
-        });
-        const file = await handle.getFile();
-        const text = await file.text();
-        applyImportedPayload(JSON.parse(text));
-        localFileHandle = handle;
-        localFileName = handle.name || "lintu-ai-ilerleme.json";
-        setLocalSaveStatus(true, `Yerel dosya bağlandı: ${localFileName}`);
-        return;
-      } catch (err) {
-        if (err && err.name === "AbortError") return;
-        // Düşerse klasik dosya girişine geç
+  function unpackBitmaskHex(hex, ids) {
+    const out = {};
+    const clean = String(hex || "").toLowerCase();
+    for (let i = 0; i < ids.length; i += 4) {
+      const nibble = parseInt(clean[i / 4] || "0", 16);
+      if (Number.isNaN(nibble)) continue;
+      for (let b = 0; b < 4; b++) {
+        const id = ids[i + b];
+        if (id && (nibble & (1 << b))) {
+          out[id] = true;
+        }
       }
     }
-    const input = document.getElementById("importProgressInput");
-    if (input) input.click();
+    return out;
   }
 
-  function downloadJsonBackup() {
+  function utf8ToBase64Url(str) {
+    let b64 = "";
+    if (typeof TextEncoder !== "undefined" && typeof btoa === "function") {
+      const bytes = new TextEncoder().encode(str);
+      let bin = "";
+      bytes.forEach((b) => { bin += String.fromCharCode(b); });
+      b64 = btoa(bin);
+    } else if (typeof Buffer !== "undefined") {
+      b64 = Buffer.from(str, "utf8").toString("base64");
+    } else {
+      b64 = btoa(unescape(encodeURIComponent(str)));
+    }
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function base64UrlToUtf8(b64Url) {
+    let b64 = String(b64Url || "").replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4 !== 0) b64 += "=";
+    if (typeof TextDecoder !== "undefined" && typeof atob === "function") {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(b64, "base64").toString("utf8");
+    }
+    return decodeURIComponent(escape(atob(b64)));
+  }
+
+  function encodeSyncCode(memberNameOverride) {
+    const name = memberNameOverride && appState.members[memberNameOverride]
+      ? memberNameOverride
+      : appState.activeMember;
+    const member = appState.members[name] || createEmptyMember("ortak");
     const payload = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      state: appState
+      v: 3,
+      n: name,
+      r: member.role,
+      s: appState.startMonth,
+      t: packBitmaskHex(getTopicIds(), member.topics),
+      w: packBitmaskHex(getWeekIds(), member.weeks),
+      b: Object.keys(member.bookmarks || {}).filter((k) => member.bookmarks[k])
     };
-    const safeName = appState.activeProfile.toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "ekip";
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `lintu-ai-ilerleme-${safeName}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    return "LINTU3-" + utf8ToBase64Url(JSON.stringify(payload));
   }
 
-  function buildObsidianMarkdown() {
-    const prof = getActiveProfile();
-    const today = new Date().toISOString().slice(0, 10);
-    const roleLabel = ROLE_LABELS[prof.role] || prof.role;
-    const byKey = new Map();
-    DATA.ALL_RESOURCES.forEach((r) => byKey.set(resourceKey(r), r));
-
-    const doneItems = [];
-    const doingItems = [];
-    const starredItems = [];
-    const noteItems = [];
-
-    byKey.forEach((item, key) => {
-      const st = prof.statuses[key] || "todo";
-      const label = `- [${st === "done" ? "x" : " "}] **${item.title}** (${item.year}) — ${item.url}`;
-      if (st === "done") doneItems.push(label);
-      if (st === "doing") doingItems.push(label);
-      if (prof.stars[key]) starredItems.push(`- ★ **${item.title}** — ${item.url}`);
-      if (prof.notes[key] && prof.notes[key].trim()) {
-        noteItems.push(`### ${item.title}\n${prof.notes[key].trim()}\nKaynak: ${item.url}`);
+  function decodeSyncCode(code) {
+    const trimmed = String(code || "").trim();
+    if (!trimmed.startsWith("LINTU3-")) return null;
+    try {
+      const jsonStr = base64UrlToUtf8(trimmed.slice(7));
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed || parsed.v !== 3 || typeof parsed.n !== "string") return null;
+      const bookmarks = {};
+      if (Array.isArray(parsed.b)) {
+        parsed.b.forEach((id) => {
+          if (id) bookmarks[String(id)] = true;
+        });
       }
-    });
-
-    return [
-      "---",
-      "tur: ilerleme-raporu",
-      `tarih: ${today}`,
-      `profil: ${appState.activeProfile}`,
-      `rol: ${roleLabel}`,
-      `seviye: ${prof.level}`,
-      "etiketler: [ai, lintu, yol-haritasi]",
-      "---",
-      "",
-      `# Lintu AI Yol Haritası İlerleme Özeti — ${appState.activeProfile}`,
-      "",
-      `- **Rol:** ${roleLabel}`,
-      `- **Seviye:** ${prof.level}`,
-      `- **Tamamlanan:** ${doneItems.length} / ${byKey.size}`,
-      `- **Şu An Çalışılan:** ${doingItems.length}`,
-      "",
-      "## Çalışıyorum",
-      doingItems.length ? doingItems.join("\n") : "- Henüz işaretlenen yok.",
-      "",
-      "## Tamamlananlar",
-      doneItems.length ? doneItems.join("\n") : "- Henüz tamamlanan yok.",
-      "",
-      "## Yıldızlı (Favori) Kaynaklar",
-      starredItems.length ? starredItems.join("\n") : "- Henüz favori yok.",
-      "",
-      "## Kişisel Notlar",
-      noteItems.length ? noteItems.join("\n\n") : "- Henüz not eklenmedi.",
-      ""
-    ].join("\n");
+      return {
+        memberName: parsed.n.trim() || "Üye",
+        role: ROLE_LABELS[parsed.r] ? parsed.r : "ortak",
+        startMonth: parsed.s === "relative" || /^\d{4}-\d{2}$/.test(String(parsed.s || ""))
+          ? String(parsed.s)
+          : "2026-11",
+        topics: unpackBitmaskHex(parsed.t, getTopicIds()),
+        weeks: unpackBitmaskHex(parsed.w, getWeekIds()),
+        bookmarks
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
-  function exportObsidianMarkdown() {
-    const md = buildObsidianMarkdown();
-    const safeName = appState.activeProfile.toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "ekip";
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `lintu-ai-ilerleme-${safeName}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  function applyDecodedSync(decoded) {
+    if (!decoded) return false;
+    appState.members[decoded.memberName] = {
+      role: decoded.role,
+      topics: decoded.topics,
+      weeks: decoded.weeks,
+      bookmarks: decoded.bookmarks
+    };
+    appState.activeMember = decoded.memberName;
+    appState.startMonth = decoded.startMonth;
+    saveState();
+    return true;
   }
 
-  function applyImportedPayload(parsed) {
-    if (!parsed || typeof parsed !== "object") throw new Error("Geçersiz JSON.");
-    const candidate = parsed.state ? parsed.state : parsed;
-    appState = normalizeState(candidate);
-    saveAppState();
-    renderProfileControls();
-    updateProgressUI();
-    rerenderTrackableViews();
+  function checkUrlSyncParam() {
+    if (!HAS_WINDOW || !window.location || typeof URLSearchParams === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const syncCode = params.get("sync");
+      if (!syncCode) return;
+      const decoded = decodeSyncCode(syncCode);
+      if (decoded && applyDecodedSync(decoded)) {
+        showToast(`${decoded.memberName} ilerlemesi Sync bağlantısından yüklendi.`);
+      }
+      params.delete("sync");
+      const qs = params.toString();
+      const cleanUrl = window.location.pathname + (qs ? "?" + qs : "") + window.location.hash;
+      if (window.history && typeof window.history.replaceState === "function") {
+        window.history.replaceState(null, "", cleanUrl);
+      }
+    } catch (_) {}
   }
 
-  function resourceKey(item) {
-    return item.url || item.id;
+  /* ---------- Takvim Ay Etiketi ---------- */
+  function formatCalendarMonthLabel(monthIndex1Based, startMonth) {
+    const idx = Math.max(1, Number(monthIndex1Based) || 1);
+    const sm = startMonth !== undefined ? startMonth : appState.startMonth;
+    if (!sm || sm === "relative" || !/^\d{4}-\d{2}$/.test(sm)) {
+      return `Ay ${idx}`;
+    }
+    const [yStr, mStr] = sm.split("-");
+    const baseYear = Number(yStr);
+    const baseMonth = Number(mStr);
+    if (!baseYear || baseMonth < 1 || baseMonth > 12) return `Ay ${idx}`;
+    const totalMonths = baseYear * 12 + (baseMonth - 1) + (idx - 1);
+    const targetYear = Math.floor(totalMonths / 12);
+    const targetMonth = totalMonths % 12;
+    return `${TR_MONTHS[targetMonth]} ${targetYear}`;
   }
 
-  function getItemStatus(key) {
-    return getActiveProfile().statuses[key] || "todo";
+  /* ---------- Toast & Pano Kopyalama ---------- */
+  function showToast(message) {
+    const container = $("toastContainer");
+    if (!container) return;
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => {
+      el.remove();
+    }, 3200);
   }
 
-  function setItemStatus(key, status) {
-    const prof = getActiveProfile();
-    if (status === "todo") {
-      delete prof.statuses[key];
+  function copyText(text, successMsg) {
+    if (!text) return;
+    if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => showToast(successMsg || "Panoya kopyalandı."))
+        .catch(() => fallbackCopy(text, successMsg));
     } else {
-      prof.statuses[key] = status;
-    }
-    saveAppState();
-    updateProgressUI();
-    syncCardStates();
-    if (currentTabId === "kutuphane" && activeLibStatus !== "all") {
-      renderLibrary();
+      fallbackCopy(text, successMsg);
     }
   }
 
-  function toggleItemStar(key) {
-    const prof = getActiveProfile();
-    if (prof.stars[key]) {
-      delete prof.stars[key];
-    } else {
-      prof.stars[key] = true;
+  function fallbackCopy(text, successMsg) {
+    if (!HAS_DOC) return;
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast(successMsg || "Panoya kopyalandı.");
+    } catch (_) {
+      showToast("Kopyalama başarısız; metni elle seçebilirsiniz.");
     }
-    saveAppState();
-    syncCardStates();
-    if (currentTabId === "kutuphane" && activeLibStatus === "starred") {
-      renderLibrary();
+    ta.remove();
+  }
+
+  /* ---------- Tema ---------- */
+  function applyTheme(theme) {
+    const next = theme === "dark" ? "dark" : "light";
+    if (HAS_DOC) {
+      document.documentElement.setAttribute("data-theme", next);
     }
-  }
-
-  function setItemNote(key, text) {
-    const prof = getActiveProfile();
-    const val = String(text || "");
-    if (!val.trim()) {
-      delete prof.notes[key];
-    } else {
-      prof.notes[key] = val;
+    if (typeof localStorage !== "undefined") {
+      try { localStorage.setItem(STORAGE_KEY_THEME, next); } catch (_) {}
     }
-    saveAppState();
-    syncCardStates();
-  }
-
-  function isRecommendedItem(item) {
-    const prof = getActiveProfile();
-    const roles = Array.isArray(item.roles) ? item.roles : [];
-    const roleMatch = roles.includes(prof.role) || (prof.level === "Başlangıç" && roles.includes("ortak"));
-    if (!roleMatch) return false;
-    if (!item.level || !(item.level in LEVEL_ORDER)) return true;
-    const itemLvl = LEVEL_ORDER[item.level];
-    const profLvl = LEVEL_ORDER[prof.level] ?? 0;
-    return Math.abs(itemLvl - profLvl) <= 1;
-  }
-
-  function renderItemControlsHtml(key) {
-    const prof = getActiveProfile();
-    const st = prof.statuses[key] || "todo";
-    const starred = Boolean(prof.stars[key]);
-    const noteText = prof.notes[key] || "";
-    const hasNote = Boolean(noteText.trim());
-    return `
-      <div class="item-controls">
-        <div class="status-pills" role="group" aria-label="Çalışma durumu">
-          <button class="status-pill ${st === "todo" ? "active-todo" : ""}" data-action="status" data-status="todo" type="button">Başlanmadı</button>
-          <button class="status-pill ${st === "doing" ? "active-doing" : ""}" data-action="status" data-status="doing" type="button">Çalışıyorum</button>
-          <button class="status-pill ${st === "done" ? "active-done" : ""}" data-action="status" data-status="done" type="button">Tamamlandı</button>
-        </div>
-        <button class="star-btn ${starred ? "active" : ""}" data-action="star" type="button" title="Favorilere ekle">${starred ? "★" : "☆"}</button>
-        <button class="note-btn ${hasNote ? "has-note" : ""}" data-action="toggle-note" type="button" title="Kişisel not ekle">Not${hasNote ? " ●" : ""}</button>
-      </div>
-    `;
-  }
-
-  function renderNoteBoxHtml(key) {
-    const noteText = getActiveProfile().notes[key] || "";
-    return `
-      <div class="personal-note-box">
-        <textarea class="personal-note-input" placeholder="Bu kaynakla ilgili kendi notunu yaz (otomatik kaydedilir)..." data-note-key="${escapeHtml(key)}">${escapeHtml(noteText)}</textarea>
-      </div>
-    `;
-  }
-
-  function syncCardStates() {
-    const prof = getActiveProfile();
-    document.querySelectorAll("[data-res-key]").forEach((el) => {
-      const key = el.getAttribute("data-res-key");
-      const st = prof.statuses[key] || "todo";
-      const starred = Boolean(prof.stars[key]);
-      const noteText = prof.notes[key] || "";
-      const hasNote = Boolean(noteText.trim());
-
-      el.classList.toggle("is-done", st === "done");
-      el.classList.toggle("is-doing", st === "doing");
-
-      el.querySelectorAll(".status-pill").forEach((btn) => {
-        const bSt = btn.getAttribute("data-status");
-        btn.classList.toggle("active-todo", st === "todo" && bSt === "todo");
-        btn.classList.toggle("active-doing", st === "doing" && bSt === "doing");
-        btn.classList.toggle("active-done", st === "done" && bSt === "done");
-      });
-
-      const starBtn = el.querySelector(".star-btn");
-      if (starBtn) {
-        starBtn.classList.toggle("active", starred);
-        starBtn.textContent = starred ? "★" : "☆";
-      }
-
-      const noteBtn = el.querySelector(".note-btn");
-      if (noteBtn) {
-        noteBtn.classList.toggle("has-note", hasNote);
-        noteBtn.textContent = hasNote ? "Not ●" : "Not";
-      }
-
-      const ta = el.querySelector(".personal-note-input");
-      if (ta && document.activeElement !== ta && ta.value !== noteText) {
-        ta.value = noteText;
-      }
-    });
-  }
-
-  function updateProgressUI() {
-    const prof = getActiveProfile();
-    const uniqueKeys = new Set(DATA.ALL_RESOURCES.map(resourceKey));
-    const total = uniqueKeys.size;
-    let doneCount = 0;
-    let doingCount = 0;
-    uniqueKeys.forEach((k) => {
-      const st = prof.statuses[k];
-      if (st === "done") doneCount++;
-      else if (st === "doing") doingCount++;
-    });
-    const donePct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-    const doingPct = total > 0 ? Math.round((doingCount / total) * 100) : 0;
-
-    const progressText = document.getElementById("progressText");
-    const fillDone = document.getElementById("progressBarFillDone");
-    const fillDoing = document.getElementById("progressBarFillDoing");
-    if (progressText) {
-      progressText.textContent = doingCount > 0
-        ? `${doneCount}/${total} (%${donePct}) · ${doingCount} sürüyor`
-        : `${doneCount}/${total} (%${donePct})`;
+    const btn = $("themeToggle");
+    if (btn) {
+      btn.textContent = next === "dark" ? "☀️ Aydınlık Tema" : "🌙 Koyu Tema";
     }
-    if (fillDone) fillDone.style.width = `${donePct}%`;
-    if (fillDoing) fillDoing.style.width = `${Math.min(100 - donePct, doingPct)}%`;
-  }
-
-  function renderProfileControls() {
-    const sel = document.getElementById("profileSelect");
-    const roleSel = document.getElementById("profileRoleSelect");
-    const lvlSel = document.getElementById("profileLevelSelect");
-    if (sel) {
-      sel.innerHTML = Object.keys(appState.profiles).map((name) =>
-        `<option value="${escapeHtml(name)}" ${name === appState.activeProfile ? "selected" : ""}>${escapeHtml(name)}</option>`
-      ).join("");
-    }
-    const prof = getActiveProfile();
-    if (roleSel) roleSel.value = prof.role;
-    if (lvlSel) lvlSel.value = prof.level;
-  }
-
-  function rerenderTrackableViews() {
-    renderTimeline();
-    renderInfraModules();
-    renderLibrary();
-    syncCardStates();
-  }
-
-  function badgeClassForType(typeStr) {
-    const t = (typeStr || "").toLowerCase();
-    if (t.includes("hakemli") || t.includes("derleme") || t.includes("makale")) return "badge-paper";
-    if (t.includes("ders") || t.includes("kitap") || t.includes("notu") || t.includes("tarih") || t.includes("kurucu") || t.includes("türkçe") || t.includes("etkileşimli")) return "badge-course";
-    if (t.includes("blog") || t.includes("playbook") || t.includes("rapor") || t.includes("yayın") || t.includes("görsel") || t.includes("forum")) return "badge-blog";
-    if (t.includes("kod") || t.includes("repo") || t.includes("çerçeve") || t.includes("doküman") || t.includes("kurs")) return "badge-repo";
-    if (t.includes("altyapı") || t.includes("hibe") || t.includes("hpc") || t.includes("paket")) return "badge-compute";
-    return "badge-neutral";
-  }
-
-  function accessBadge(accessStr) {
-    const a = (accessStr || "").toLowerCase();
-    if (a.includes("paywall") || a.includes("ücretli")) {
-      return `<span class="badge badge-paywall">${escapeHtml(accessStr)}</span>`;
-    }
-    return `<span class="badge badge-neutral">${escapeHtml(accessStr || "Açık Erişim")}</span>`;
-  }
-
-  function roleBadges(roles) {
-    if (!Array.isArray(roles)) return "";
-    return roles
-      .map((r) => `<span class="badge badge-neutral">${escapeHtml(ROLE_LABELS[r] || r)}</span>`)
-      .join("");
-  }
-
-  /* Navigation & Theme */
-  function activateTab(tabId, updateHash) {
-    if (!TAB_TITLES[tabId]) tabId = "genel-bakis";
-    currentTabId = tabId;
-    document.querySelectorAll(".tab-panel").forEach((p) => {
-      p.classList.toggle("active", p.id === `tab-${tabId}`);
-    });
-    document.querySelectorAll(".nav-btn").forEach((btn) => {
-      const isActive = btn.getAttribute("data-tab") === tabId;
-      btn.classList.toggle("active", isActive);
-      btn.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    const topbarTitle = document.getElementById("topbarTitle");
-    if (topbarTitle) topbarTitle.textContent = TAB_TITLES[tabId];
-    updateMascotTip(tabId);
-
-    if (updateHash) {
-      try {
-        history.replaceState(null, "", `#${tabId}`);
-      } catch (e) {
-        window.location.hash = tabId;
-      }
-    }
-    closeMobileSidebar();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function closeMobileSidebar() {
-    const sidebar = document.getElementById("sidebar");
-    const backdrop = document.getElementById("sidebarBackdrop");
-    if (sidebar) sidebar.classList.remove("open");
-    if (backdrop) backdrop.classList.remove("open");
   }
 
   function initTheme() {
-    const saved = localStorage.getItem(STORAGE_KEY_THEME) || "dark";
+    let saved = "light";
+    if (typeof localStorage !== "undefined") {
+      try {
+        saved = localStorage.getItem(STORAGE_KEY_THEME) || "light";
+      } catch (_) {}
+    }
     applyTheme(saved);
-    const btn = document.getElementById("themeToggle");
-    if (btn) {
-      btn.addEventListener("click", () => {
-        const current = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
-        const next = current === "light" ? "dark" : "light";
-        applyTheme(next);
-        localStorage.setItem(STORAGE_KEY_THEME, next);
+  }
+
+  /* ---------- Sekme & Alt Sekme Navigasyonu ---------- */
+  function switchTab(tabId) {
+    if (!TAB_TITLES[tabId]) return;
+    currentTabId = tabId;
+
+    if (HAS_DOC) {
+      document.querySelectorAll(".nav-btn[data-tab]").forEach((btn) => {
+        const active = btn.getAttribute("data-tab") === tabId;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-selected", active ? "true" : "false");
       });
+      document.querySelectorAll(".tab-panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `tab-${tabId}`);
+      });
+
+      const titleEl = $("topbarTitle");
+      if (titleEl) titleEl.textContent = TAB_TITLES[tabId];
+
+      // Mobil menüyü kapat
+      const sidebar = $("sidebar");
+      const backdrop = $("sidebarBackdrop");
+      if (sidebar) sidebar.classList.remove("open");
+      if (backdrop) backdrop.classList.remove("open");
     }
+
+    updateMascotTip(tabId);
   }
 
-  function applyTheme(theme) {
-    if (theme === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-    const btn = document.getElementById("themeToggle");
-    if (btn) btn.textContent = theme === "light" ? "Koyu Tema" : "Açık Tema";
+  function switchSubtab(group, subtabId) {
+    if (!HAS_DOC) return;
+    document.querySelectorAll(`[data-subtab-group="${group}"][data-subtab]`).forEach((btn) => {
+      const isMatch = btn.getAttribute("data-subtab") === subtabId;
+      btn.classList.toggle("active", isMatch);
+      btn.setAttribute("aria-selected", isMatch ? "true" : "false");
+    });
+
+    const container = document.querySelectorAll(`.sub-panel[data-subtab-group="${group}"], #tab-${group} .sub-panel`);
+    container.forEach((panel) => {
+      const isMatch = panel.id === subtabId;
+      panel.classList.toggle("active", isMatch);
+      if (isMatch) panel.removeAttribute("hidden");
+      else panel.setAttribute("hidden", "");
+    });
   }
 
-  /* 0. Beginner Guide */
-  function renderBeginnerGuide() {
-    const guide = DATA.BEGINNER_GUIDE;
-    if (!guide) return;
+  function updateMascotTip(tabId) {
+    const tipEl = $("mascotTipText");
+    if (!tipEl || !DATA || !DATA.MASCOT_TAB_TIPS) return;
+    tipEl.textContent = DATA.MASCOT_TAB_TIPS[tabId] || DATA.MASCOT_TAB_TIPS.baslangic || "";
+  }
 
-    const planGrid = document.getElementById("sevenDayPlanGrid");
-    if (planGrid) {
-      planGrid.innerHTML = guide.sevenDayPlan.map((d) => `
+  /* ---------- İlerleme Özeti & Sayıcılar ---------- */
+  function getProgressMetrics() {
+    const member = getActiveMember();
+    const topicIds = getTopicIds();
+    const weekIds = getWeekIds();
+    const doneTopics = topicIds.filter((id) => Boolean(member.topics[id])).length;
+    const doneWeeks = weekIds.filter((id) => Boolean(member.weeks[id])).length;
+    const totalItems = topicIds.length + weekIds.length;
+    const doneTotal = doneTopics + doneWeeks;
+    const pct = totalItems > 0 ? Math.round((doneTotal / totalItems) * 100) : 0;
+    return {
+      doneTopics,
+      totalTopics: topicIds.length,
+      doneWeeks,
+      totalWeeks: weekIds.length,
+      pct
+    };
+  }
+
+  function updateHeaderAndSidebarProgress() {
+    const m = getProgressMetrics();
+    const member = getActiveMember();
+
+    const setTxt = (id, val) => {
+      const el = $(id);
+      if (el) el.textContent = val;
+    };
+
+    setTxt("navCountLevels", `${m.doneTopics}/${m.totalTopics}`);
+    setTxt("navCountCalendar", `${m.doneWeeks}/${m.totalWeeks}`);
+    setTxt("navCountTimeline", DATA && DATA.TIMELINE_ITEMS ? String(DATA.TIMELINE_ITEMS.length) : "82");
+    setTxt("navCountLibrary", DATA && DATA.ALL_RESOURCES ? String(DATA.ALL_RESOURCES.length) : "143");
+
+    setTxt("sidebarMemberLabel", `${appState.activeMember} · ${ROLE_LABELS[member.role] || member.role}`);
+    setTxt("sidebarProgressPct", `%${m.pct}`);
+    const bar = $("sidebarProgressBar");
+    if (bar) bar.style.width = `${m.pct}%`;
+
+    setTxt("heroLevelProgress", `${m.doneTopics}/${m.totalTopics}`);
+    setTxt("heroCalendarProgress", `${m.doneWeeks}/${m.totalWeeks}`);
+    setTxt("heroResourceCount", DATA && DATA.ALL_RESOURCES ? String(DATA.ALL_RESOURCES.length) : "143");
+  }
+
+  /* ---------- 0. Başlangıç Sekmesi ---------- */
+  function renderBeginnerSection() {
+    if (!DATA || !DATA.BEGINNER_GUIDE) return;
+    const bg = DATA.BEGINNER_GUIDE;
+
+    const sevenGrid = $("sevenDayPlanGrid");
+    if (sevenGrid) {
+      sevenGrid.innerHTML = (bg.sevenDayPlan || []).map((d) => `
         <article class="card">
-          <div class="badge-row">
-            <span class="year-pill">${escapeHtml(d.day)}</span>
-            <span class="badge badge-course">Başlangıç</span>
+          <div class="card-head">
+            <span class="badge badge-brand">${escapeHtml(d.day)}</span>
           </div>
           <h4 class="card-title">${escapeHtml(d.title)}</h4>
           <p class="small muted">${escapeHtml(d.goal)}</p>
-          <ul style="margin:4px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:5px;">
-            ${d.steps.map((s) => `<li class="small">${escapeHtml(s)}</li>`).join("")}
+          <ul class="clean-list small">
+            ${(d.steps || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
           </ul>
         </article>
       `).join("");
     }
 
-    const helpGrid = document.getElementById("helpChannelsGrid");
+    const helpGrid = $("helpChannelsGrid");
     if (helpGrid) {
-      helpGrid.innerHTML = guide.helpChannels.map((h) => `
+      helpGrid.innerHTML = (bg.helpChannels || []).map((h) => `
         <article class="card">
           <div class="card-head">
-            <h4 class="card-title">${escapeHtml(h.name)}</h4>
-            <span class="badge badge-compute">${escapeHtml(h.tag)}</span>
+            <span class="badge">${escapeHtml(h.tag)}</span>
           </div>
-          <div class="card-body"><p class="small">${escapeHtml(h.when)}</p></div>
+          <h4 class="card-title">${escapeHtml(h.name)}</h4>
+          <p class="small">${escapeHtml(h.when)}</p>
           <div class="card-foot">
             <span></span>
-            <div style="display:flex; gap:6px;">
-              ${h.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(h.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Ek Link ↗</a>` : ""}
-              <a class="btn btn-primary btn-xs" href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">Siteye Git ↗</a>
-            </div>
+            <a class="btn btn-primary btn-xs" href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">Kanala Git ↗</a>
           </div>
         </article>
       `).join("");
     }
 
-    const stuckGrid = document.getElementById("stuckPromptsGrid");
-    if (stuckGrid) {
-      stuckGrid.innerHTML = guide.stuckPrompts.map((p, idx) => `
+    const emailEl = $("advisorEmailText");
+    if (emailEl) {
+      emailEl.textContent = bg.advisorEmailTemplate || "";
+    }
+
+    const realityGrid = $("realityGrid");
+    if (realityGrid && Array.isArray(DATA.REALITY_BENCHMARKS)) {
+      realityGrid.innerHTML = DATA.REALITY_BENCHMARKS.map((r) => `
         <article class="card">
           <div class="card-head">
-            <h4 class="card-title">${escapeHtml(p.title)}</h4>
-            <button class="btn btn-primary btn-xs copy-stuck-btn" data-prompt-idx="${idx}" type="button">Kopyala</button>
+            <span class="badge ${r.verdictType === "warn" ? "badge-warn" : "badge-ok"}">${escapeHtml(r.verdict)}</span>
+            <span class="small muted">${escapeHtml(r.metric)}</span>
           </div>
-          <pre class="prompt-box" style="max-height:150px;">${escapeHtml(p.prompt)}</pre>
+          <h4 class="card-title">${escapeHtml(r.title)}</h4>
+          <p class="small">${escapeHtml(r.summary)}</p>
+          <div class="where-used-box small"><strong>Çıkarım:</strong> ${escapeHtml(r.takeaway)}</div>
+          <div class="card-foot">
+            <span class="small muted">${escapeHtml(r.sourceLabel)}</span>
+            <a class="btn btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Kaynak ↗</a>
+          </div>
         </article>
       `).join("");
     }
-
-    const advText = document.getElementById("advisorEmailText");
-    if (advText) advText.textContent = guide.advisorEmailTemplate;
 
     renderGlossary();
   }
 
   function renderGlossary() {
-    const guide = DATA.BEGINNER_GUIDE;
-    if (!guide) return;
-    const searchEl = document.getElementById("glossarySearch");
-    const q = (searchEl ? searchEl.value : "").trim().toLowerCase();
-    const grid = document.getElementById("glossaryGrid");
-    const badge = document.getElementById("glossaryCountBadge");
+    if (!DATA || !DATA.BEGINNER_GUIDE) return;
+    const grid = $("glossaryGrid");
     if (!grid) return;
-
-    const filtered = guide.glossary.filter((g) => {
+    const q = ($("glossarySearch") ? $("glossarySearch").value : "").trim().toLowerCase();
+    const list = (DATA.BEGINNER_GUIDE.glossary || []).filter((g) => {
       if (!q) return true;
       return `${g.term} ${g.plain} ${g.analogy} ${g.module}`.toLowerCase().includes(q);
     });
+    const badge = $("glossaryCountBadge");
+    if (badge) badge.textContent = `${list.length} terim`;
 
-    if (badge) badge.textContent = `${filtered.length} terim`;
-
-    grid.innerHTML = filtered.map((g) => `
+    grid.innerHTML = list.map((g) => `
       <article class="card">
         <div class="card-head">
           <h4 class="card-title">${escapeHtml(g.term)}</h4>
-          <span class="badge badge-neutral">${escapeHtml(g.module)}</span>
+          <span class="badge">${escapeHtml(g.module)}</span>
         </div>
-        <div class="card-body">
-          <p class="small">${escapeHtml(g.plain)}</p>
-          <p class="small muted" style="margin-top:6px;"><strong>Benzetme:</strong> ${escapeHtml(g.analogy)}</p>
-        </div>
+        <p class="small">${escapeHtml(g.plain)}</p>
+        <div class="where-used-box small"><strong>Günlük Benzetme:</strong> ${escapeHtml(g.analogy)}</div>
       </article>
     `).join("");
   }
 
-  /* 1. Overview */
-  function renderOverview() {
-    const paperCount = DATA.ALL_RESOURCES.filter((r) => r.id.startsWith("res-p")).length;
-    const statsEl = document.getElementById("heroStats");
-    if (statsEl) {
-      statsEl.innerHTML = `
-        <div class="fact-box"><span class="n grad-text">${paperCount}</span><span class="l">Doğrulanmış Akademik Makale (1943–2026)</span></div>
-        <div class="fact-box"><span class="n grad-text">${DATA.STORY_ARCS ? DATA.STORY_ARCS.length : 7} Perde</span><span class="l">Nedensellik Olay Örgüsü + 10 Altyapı Modülü</span></div>
-        <div class="fact-box"><span class="n grad-text">${DATA.CREDENTIAL_AUDIT.length}</span><span class="l">Nitelik Denetimli Blog, Kurs &amp; Repo</span></div>
-        <div class="fact-box"><span class="n grad-text">${DATA.ALL_RESOURCES.length}</span><span class="l">Toplam Tekilleştirilmiş Kaynak</span></div>
-      `;
-    }
+  /* ---------- 1. Seviyeler & Müfredat ---------- */
+  function renderLevelsTab() {
+    if (!DATA || !Array.isArray(DATA.LEVEL_GROUPS)) return;
+    const member = getActiveMember();
+    const resMap = getResourceMap();
+    const modUse = DATA.MODULE_USE_CASES || {};
+    const roleFilter = $("levelRoleFilter") ? $("levelRoleFilter").value : "all";
 
-    const grid = document.getElementById("realityBenchmarksGrid");
-    if (grid) {
-      grid.innerHTML = DATA.REALITY_BENCHMARKS.map((b) => {
-        const badgeCls = b.verdictType === "ok" ? "badge-paper" : b.verdictType === "warn" ? "badge-blog" : "badge-paywall";
+    const stepper = $("levelStepper");
+    if (stepper) {
+      const allBtn = `<button type="button" class="level-pill ${activeLevelId === "all" ? "active" : ""}" data-level-id="all">Tüm Seviyeler</button>`;
+      const lvlBtns = DATA.LEVEL_GROUPS.map((lvl) => {
+        const done = (lvl.topics || []).filter((t) => member.topics[t.id]).length;
+        const total = (lvl.topics || []).length;
         return `
-          <article class="card">
-            <div class="card-head">
-              <h4 class="card-title">${escapeHtml(b.title)}</h4>
-              <span class="badge ${badgeCls}">${escapeHtml(b.verdict)}</span>
-            </div>
-            <div class="card-meta"><strong>${escapeHtml(b.metric)}</strong></div>
-            <div class="card-body">
-              <p>${escapeHtml(b.summary)}</p>
-              <p class="small muted"><strong>Ekibe Çıkarım:</strong> ${escapeHtml(b.takeaway)}</p>
-            </div>
-            <div class="card-foot">
-              <span class="small muted">${escapeHtml(b.sourceLabel)}</span>
-              <a class="btn btn-xs" href="${escapeHtml(b.url)}" target="_blank" rel="noopener noreferrer">Kaynağa Git ↗</a>
-            </div>
-          </article>
+          <button type="button" class="level-pill ${activeLevelId === lvl.id ? "active" : ""}" data-level-id="${escapeHtml(lvl.id)}">
+            <span>${escapeHtml(lvl.badge)}</span>
+            <strong>${done}/${total}</strong>
+          </button>
         `;
       }).join("");
+      stepper.innerHTML = allBtn + lvlBtns;
     }
 
-    const ethicsFootnote = document.getElementById("ethicsFootnote");
-    if (ethicsFootnote) ethicsFootnote.textContent = DATA.meta.ethicsFootNote;
-  }
-
-  /* 2. Story Arcs & Chronological Timeline */
-  function switchHistoryView(mode) {
-    const storyBtn = document.getElementById("viewStoryBtn");
-    const chronoBtn = document.getElementById("viewChronoBtn");
-    const storySec = document.getElementById("storyArcSection");
-    const chronoSec = document.getElementById("chronoSection");
-    const isStory = mode === "story";
-    if (storyBtn) storyBtn.classList.toggle("active", isStory);
-    if (chronoBtn) chronoBtn.classList.toggle("active", !isStory);
-    if (storySec) storySec.style.display = isStory ? "block" : "none";
-    if (chronoSec) chronoSec.style.display = isStory ? "none" : "block";
-  }
-
-  function renderStoryArcs() {
-    const container = document.getElementById("storyArcContainer");
-    if (!container || !Array.isArray(DATA.STORY_ARCS)) return;
-
-    const tlMap = new Map();
-    DATA.TIMELINE_ITEMS.forEach((t) => tlMap.set(t.id, t));
-
-    container.innerHTML = DATA.STORY_ARCS.map((arc) => `
-      <article class="story-arc-card">
-        <div class="eyebrow">${escapeHtml(arc.act)}</div>
-        <h3 style="margin:4px 0 8px; font-size:1.25rem;">${escapeHtml(arc.title)}</h3>
-        <div class="arc-beats">
-          <div class="arc-beat">
-            <div class="arc-beat-label">1. Sahne</div>
-            <p class="small" style="margin:0;">${escapeHtml(arc.scene)}</p>
-          </div>
-          <div class="arc-beat wall">
-            <div class="arc-beat-label">2. Çarpılan Duvar</div>
-            <p class="small" style="margin:0;">${escapeHtml(arc.wall)}</p>
-          </div>
-          <div class="arc-beat breakthrough">
-            <div class="arc-beat-label">3. Kırılma Anı</div>
-            <p class="small" style="margin:0;">${escapeHtml(arc.breakthrough)}</p>
-          </div>
-        </div>
-        <div class="arc-bridge"><strong>Sonraki Perdeye Köprü:</strong> ${escapeHtml(arc.bridge)}</div>
-        <div class="arc-paper-chips">
-          ${arc.paperIds.map((pid) => {
-            const p = tlMap.get(pid);
-            if (!p) return "";
-            const shortTitle = p.title.length > 42 ? p.title.slice(0, 40) + "…" : p.title;
-            return `<button class="arc-paper-chip" data-jump-tl="${escapeHtml(p.id)}" type="button"><span class="mono" style="color:var(--brand);">${escapeHtml(p.year)}</span> · ${escapeHtml(shortTitle)}</button>`;
-          }).join("")}
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function jumpToTimelineItem(tlId) {
-    switchHistoryView("chrono");
-    activeTimelineEra = "all";
-    document.querySelectorAll("#timelineEraChips .chip").forEach((c) => {
-      c.classList.toggle("active", c.getAttribute("data-era") === "all");
-    });
-    const searchEl = document.getElementById("timelineSearch");
-    if (searchEl) searchEl.value = "";
-    renderTimeline();
-
-    const target = document.querySelector(`[data-tl-id="${CSS.escape ? CSS.escape(tlId) : tlId}"]`);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      target.classList.add("flash-highlight");
-      setTimeout(() => target.classList.remove("flash-highlight"), 2200);
+    const m = getProgressMetrics();
+    const summaryBar = $("levelSummaryBar");
+    if (summaryBar) {
+      summaryBar.innerHTML = `
+        <span><strong>${m.doneTopics} / ${m.totalTopics}</strong> konu tamamlandı</span>
+        <span class="muted">·</span>
+        <span>Rol filtresi: <strong>${escapeHtml(roleFilter === "all" ? "Tümü" : (ROLE_LABELS[roleFilter] || roleFilter))}</strong></span>
+      `;
     }
-  }
 
-  function renderTimeline() {
-    const searchInput = document.getElementById("timelineSearch");
-    const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
-    const container = document.getElementById("timelineContainer");
+    const container = $("levelsContainer");
     if (!container) return;
 
-    const filtered = DATA.TIMELINE_ITEMS.filter((item) => {
-      if (activeTimelineEra !== "all" && item.era !== activeTimelineEra) return false;
-      if (!q) return true;
-      const hay = `${item.year} ${item.title} ${item.authors} ${item.venue} ${item.whyItMatters} ${item.whatYouLearn}`.toLowerCase();
-      return hay.includes(q);
-    });
+    const visibleLevels = DATA.LEVEL_GROUPS.filter((lvl) => activeLevelId === "all" || lvl.id === activeLevelId);
+    container.innerHTML = visibleLevels.map((lvl) => {
+      const topics = (lvl.topics || []).filter((t) => {
+        if (roleFilter === "all") return true;
+        return Array.isArray(t.roles) && (t.roles.includes(roleFilter) || t.roles.includes("ortak"));
+      });
+      const doneInLevel = (lvl.topics || []).filter((t) => member.topics[t.id]).length;
+      const modCards = (lvl.moduleIds || []).map((mid) => {
+        const uc = modUse[mid];
+        return uc
+          ? `<span class="badge" title="${escapeHtml(uc.whereUsed)}">${escapeHtml(mid.toUpperCase())}: ${escapeHtml((uc.realProducts || []).slice(0, 2).join(", "))}</span>`
+          : `<span class="badge">${escapeHtml(mid.toUpperCase())}</span>`;
+      }).join(" ");
 
-    if (filtered.length === 0) {
-      container.innerHTML = `<div class="callout">Arama kriterine uyan dönüm noktası bulunamadı.</div>`;
-      return;
-    }
-
-    container.innerHTML = filtered.map((item) => {
-      const key = resourceKey(item);
-      const st = getItemStatus(key);
-      const rec = isRecommendedItem(item);
       return `
-        <article class="card timeline-item ${st === "done" ? "is-done" : st === "doing" ? "is-doing" : ""} ${rec ? "is-recommended" : ""}" data-res-key="${escapeHtml(key)}" data-tl-id="${escapeHtml(item.id)}">
+        <section class="card level-section" data-level-block="${escapeHtml(lvl.id)}">
           <div class="card-head">
             <div>
-              <div class="badge-row" style="margin-bottom:6px;">
-                <span class="year-pill">${escapeHtml(item.year)}</span>
-                <span class="badge ${badgeClassForType(item.credibilityType)}">${escapeHtml(item.credibilityType)}</span>
-                ${accessBadge(item.accessStatus)}
-                ${rec ? `<span class="badge badge-rec">✨ Önerilen</span>` : ""}
-              </div>
-              <h3 class="card-title">${escapeHtml(item.title)}</h3>
-              <div class="card-meta">${escapeHtml(item.authors)} • <em>${escapeHtml(item.venue)}</em></div>
+              <span class="badge badge-brand">${escapeHtml(lvl.badge)} · ${escapeHtml(lvl.duration)}</span>
+              <h3 style="margin:6px 0 4px;">${escapeHtml(lvl.title)}</h3>
+              <p class="small muted">${escapeHtml(lvl.subtitle || "")}</p>
             </div>
-            ${renderItemControlsHtml(key)}
+            <span class="badge badge-ok">${doneInLevel}/${(lvl.topics || []).length} Tamam</span>
           </div>
-          <div class="card-body">
-            <p><strong>Neden Dönüm Noktası?</strong> ${escapeHtml(item.whyItMatters)}</p>
-            <p class="small muted"><strong>Buradan Ne Öğreneceksin?</strong> ${escapeHtml(item.whatYouLearn)}</p>
-            ${renderNoteBoxHtml(key)}
+          <div class="small" style="margin-bottom:10px;">
+            <strong>Ön Koşul:</strong> ${escapeHtml(lvl.prerequisites)} ·
+            <strong>Bitirme Çıktısı:</strong> ${escapeHtml(lvl.capstone)}
           </div>
-          <div class="card-foot">
-            <div class="badge-row">${roleBadges(item.roles)}</div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              ${item.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(item.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Ek Bağlantı ↗</a>` : ""}
-              <a class="btn btn-primary btn-xs" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Makaleyi Aç ↗</a>
-            </div>
+          <div class="where-used-box small">
+            <strong>Nerede İşe Yarar?</strong> ${escapeHtml(lvl.whereUsedOverall)}
+            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">${modCards}</div>
           </div>
-        </article>
-      `;
-    }).join("");
-
-    const synGrid = document.getElementById("historySynthesisGrid");
-    if (synGrid && synGrid.childElementCount === 0) {
-      synGrid.innerHTML = DATA.HISTORY_SYNTHESIS.map((h) => `
-        <article class="card">
-          <div class="card-head">
-            <h4 class="card-title">${escapeHtml(h.title)}</h4>
-            <span class="badge ${badgeClassForType(h.credibilityType)}">${escapeHtml(h.credibilityType)}</span>
-          </div>
-          <div class="card-meta">${escapeHtml(h.author)} • ${escapeHtml(h.venue)}</div>
-          <div class="card-body"><p>${escapeHtml(h.note)}</p></div>
-          <div class="card-foot">
-            <span></span>
-            <div style="display:flex; gap:6px;">
-              ${h.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(h.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Ana Portal ↗</a>` : ""}
-              <a class="btn btn-primary btn-xs" href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">Kaynağı Aç ↗</a>
-            </div>
-          </div>
-        </article>
-      `).join("");
-    }
-  }
-
-  /* 3. Infrastructure Modules */
-  function renderInfraModules() {
-    const container = document.getElementById("infraModulesContainer");
-    if (!container) return;
-
-    const filtered = DATA.INFRA_MODULES.filter((m) => {
-      if (activeInfraRole === "all") return true;
-      return Array.isArray(m.roles) && m.roles.includes(activeInfraRole);
-    });
-
-    container.innerHTML = filtered.map((m, idx) => `
-      <div class="module-card ${idx === 0 ? "open" : ""}" id="${escapeHtml(m.id)}">
-        <button class="module-header" type="button" aria-expanded="${idx === 0 ? "true" : "false"}">
-          <div class="module-title-wrap">
-            <div class="badge-row">
-              <span class="year-pill">${escapeHtml(m.number)}</span>
-              <span class="badge badge-neutral">${escapeHtml(m.level)}</span>
-              ${roleBadges(m.roles)}
-            </div>
-            <div class="module-title">${escapeHtml(m.title)}</div>
-            <div class="module-summary">${escapeHtml(m.summary)}</div>
-          </div>
-          <span class="module-chevron">▾</span>
-        </button>
-        <div class="module-body">
-          <div class="callout callout-ok" style="margin-top:0;">
-            <h4>Neden Bu Aşamada?</h4>
-            <p>${escapeHtml(m.whyBeforeCoding)}</p>
-          </div>
-          <div class="grid-2">
-            ${m.resources.map((r) => {
-              const key = r.url;
-              const st = getItemStatus(key);
+          <div class="topics-grid" style="margin-top:12px;">
+            ${topics.map((t) => {
+              const isDone = Boolean(member.topics[t.id]);
+              const links = (t.resourceIds || []).map((rid) => {
+                const r = resMap[rid];
+                if (!r) return "";
+                return `<a class="btn btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.title)} ↗</a>`;
+              }).join("");
               return `
-                <article class="card ${st === "done" ? "is-done" : st === "doing" ? "is-doing" : ""}" data-res-key="${escapeHtml(key)}">
+                <article class="topic-card ${isDone ? "done" : ""}">
                   <div class="card-head">
-                    <div>
-                      <span class="badge ${badgeClassForType(r.type)}">${escapeHtml(r.type)}</span>
-                      <h4 class="card-title" style="margin-top:6px;">${escapeHtml(r.title)}</h4>
-                    </div>
-                    ${renderItemControlsHtml(key)}
+                    <h4 class="card-title">${escapeHtml(t.title)}</h4>
+                    <button type="button" class="check-btn ${isDone ? "done" : ""}" data-topic-id="${escapeHtml(t.id)}" aria-pressed="${isDone}">
+                      ${isDone ? "✓ Tamamlandı" : "○ İşaretle"}
+                    </button>
                   </div>
-                  <div class="card-body">
-                    <p class="small">${escapeHtml(r.why)}</p>
-                    ${renderNoteBoxHtml(key)}
+                  <p class="small">${escapeHtml(t.summary)}</p>
+                  <div style="display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;">
+                    ${(t.concepts || []).map((c) => `<span class="badge">${escapeHtml(c)}</span>`).join("")}
                   </div>
-                  <div class="card-foot">
-                    <span></span>
-                    <div style="display:flex; gap:6px;">
-                      ${r.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(r.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Ek Link ↗</a>` : ""}
-                      <a class="btn btn-primary btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Aç ↗</a>
+                  <p class="small"><strong>Pratik Görev:</strong> ${escapeHtml(t.practice)}</p>
+                  <div class="where-used-box small"><strong>Nerede İşe Yarar?</strong> ${escapeHtml(t.whereUsed)}</div>
+                  <div class="card-foot" style="margin-top:8px; flex-wrap:wrap; gap:6px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                      ${(t.roles || []).map((r) => `<span class="badge badge-role">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("")}
                     </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">${links}</div>
                   </div>
                 </article>
               `;
             }).join("")}
           </div>
+        </section>
+      `;
+    }).join("");
+  }
+
+  /* ---------- 2. 12 Aylık Yıllık & Aylık Takvim ---------- */
+  function renderCalendarTab() {
+    if (!DATA || !Array.isArray(DATA.ANNUAL_CALENDAR)) return;
+    const member = getActiveMember();
+    const startSelect = $("calStartMonthSelect");
+    if (startSelect && startSelect.value !== appState.startMonth) {
+      startSelect.value = appState.startMonth;
+    }
+
+    const annualView = $("calAnnualView");
+    const monthlyView = $("calMonthlyView");
+    const annualBtn = $("calViewAnnualBtn");
+    const monthlyBtn = $("calViewMonthlyBtn");
+    if (annualView && monthlyView) {
+      if (calViewMode === "annual") {
+        annualView.removeAttribute("hidden");
+        monthlyView.setAttribute("hidden", "");
+      } else {
+        annualView.setAttribute("hidden", "");
+        monthlyView.removeAttribute("hidden");
+      }
+    }
+    if (annualBtn) annualBtn.classList.toggle("active", calViewMode === "annual");
+    if (monthlyBtn) monthlyBtn.classList.toggle("active", calViewMode === "monthly");
+
+    const mStats = getProgressMetrics();
+    const summaryEl = $("calProgressSummary");
+    if (summaryEl) {
+      summaryEl.innerHTML = `<strong>${mStats.doneWeeks}/${mStats.totalWeeks}</strong> hafta tamamlandı · Başlangıç: <strong>${escapeHtml(formatCalendarMonthLabel(1, appState.startMonth))}</strong>`;
+    }
+
+    renderAnnualCalendarGrid(member);
+    renderMonthlyCalendarDetail(member);
+  }
+
+  function renderAnnualCalendarGrid(member) {
+    const grid = $("annualCalendarGrid");
+    if (!grid || !DATA) return;
+
+    const quarters = {};
+    DATA.ANNUAL_CALENDAR.forEach((m) => {
+      if (!quarters[m.quarter]) {
+        quarters[m.quarter] = { title: m.quarterTitle || m.quarter, months: [] };
+      }
+      quarters[m.quarter].months.push(m);
+    });
+
+    grid.innerHTML = Object.entries(quarters).map(([qKey, qData]) => `
+      <div class="quarter-section">
+        <h3 style="margin-bottom:10px;">${escapeHtml(qKey)} — ${escapeHtml(qData.title)}</h3>
+        <div class="annual-grid">
+          ${qData.months.map((m) => {
+            const doneW = (m.weeks || []).filter((w) => member.weeks[w.id]).length;
+            const totalW = (m.weeks || []).length;
+            const calLabel = formatCalendarMonthLabel(m.month, appState.startMonth);
+            return `
+              <article class="card month-card ${doneW === totalW && totalW > 0 ? "done" : ""}" data-cal-month="${m.month}" tabindex="0" role="button">
+                <div class="card-head">
+                  <span class="badge badge-brand">${escapeHtml(calLabel)}</span>
+                  <span class="badge ${doneW === totalW ? "badge-ok" : ""}">${doneW}/${totalW} hafta</span>
+                </div>
+                <h4 class="card-title">${escapeHtml(m.title)}</h4>
+                <p class="small muted">${escapeHtml(m.levelLabel)} · ${escapeHtml(m.hoursPerWeek)} · ${escapeHtml(m.computeStage)}</p>
+                <p class="small"><strong>Çıktı:</strong> ${escapeHtml(m.deliverable)}</p>
+                <div class="where-used-box small"><strong>Nerede İşe Yarar?</strong> ${escapeHtml(m.whereUsed)}</div>
+              </article>
+            `;
+          }).join("")}
         </div>
       </div>
     `).join("");
   }
 
-  /* 4. Calculators */
-  function updateVramCalc() {
-    const paramsM = Number(document.getElementById("vramParamsM").value) || 124;
-    const mode = document.getElementById("vramMode").value;
-    const batch = Math.max(1, Number(document.getElementById("vramBatch").value) || 1);
-    const seq = Math.max(64, Number(document.getElementById("vramSeq").value) || 512);
-    const hidden = Math.max(64, Number(document.getElementById("vramHidden").value) || 768);
-    const layers = Math.max(1, Number(document.getElementById("vramLayers").value) || 12);
-    const gradCkpt = document.getElementById("vramGradCkpt").checked;
-    const unsloth = document.getElementById("vramUnsloth").checked;
+  function renderMonthlyCalendarDetail(member) {
+    const pillsEl = $("calMonthPills");
+    const detailEl = $("calMonthDetail");
+    if (!DATA || !detailEl) return;
 
-    document.getElementById("vramParamsLabel").textContent = `${paramsM >= 1000 ? (paramsM / 1000).toFixed(2) + " B" : paramsM + " M"}`;
+    if (pillsEl) {
+      pillsEl.innerHTML = DATA.ANNUAL_CALENDAR.map((m) => {
+        const doneW = (m.weeks || []).filter((w) => member.weeks[w.id]).length;
+        const label = formatCalendarMonthLabel(m.month, appState.startMonth);
+        return `
+          <button type="button" class="level-pill ${selectedCalMonth === m.month ? "active" : ""}" data-select-month="${m.month}">
+            ${escapeHtml(label)} (${doneW}/${(m.weeks || []).length})
+          </button>
+        `;
+      }).join("");
+    }
+
+    const monthObj = DATA.ANNUAL_CALENDAR.find((m) => m.month === selectedCalMonth) || DATA.ANNUAL_CALENDAR[0];
+    if (!monthObj) return;
+
+    const resMap = getResourceMap();
+    const calLabel = formatCalendarMonthLabel(monthObj.month, appState.startMonth);
+    const teamFocus = monthObj.teamFocus || {};
+
+    detailEl.innerHTML = `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <span class="badge badge-brand">${escapeHtml(calLabel)} · ${escapeHtml(monthObj.quarter)} · ${escapeHtml(monthObj.levelLabel)}</span>
+            <h3 style="margin:6px 0 4px;">${escapeHtml(monthObj.title)}</h3>
+            <p class="small">${escapeHtml(monthObj.summary)}</p>
+          </div>
+          <span class="badge">${escapeHtml(monthObj.hoursPerWeek)} · ${escapeHtml(monthObj.computeStage)}</span>
+        </div>
+        <p class="small"><strong>Ay Sonu Teslimatı:</strong> ${escapeHtml(monthObj.deliverable)}</p>
+        <div class="where-used-box small"><strong>Nerede İşe Yarar?</strong> ${escapeHtml(monthObj.whereUsed)}</div>
+
+        <h4 style="margin:14px 0 8px;">5 Kişilik Ekip Odakları</h4>
+        <div class="team-focus-grid">
+          ${Object.entries(teamFocus).map(([roleKey, focusText]) => `
+            <div class="card" style="padding:10px;">
+              <span class="badge badge-role">${escapeHtml(ROLE_LABELS[roleKey] || roleKey)}</span>
+              <p class="small" style="margin-top:6px;">${escapeHtml(focusText)}</p>
+            </div>
+          `).join("")}
+        </div>
+
+        <h4 style="margin:16px 0 8px;">Haftalık Plan (4 Hafta)</h4>
+        <div class="week-grid">
+          ${(monthObj.weeks || []).map((w) => {
+            const isDone = Boolean(member.weeks[w.id]);
+            const links = (w.resourceIds || []).map((rid) => {
+              const r = resMap[rid];
+              return r ? `<a class="btn btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.title)} ↗</a>` : "";
+            }).join("");
+            return `
+              <article class="week-card ${isDone ? "done" : ""}">
+                <div class="card-head">
+                  <span class="badge">Hafta ${w.week}</span>
+                  <button type="button" class="check-btn ${isDone ? "done" : ""}" data-week-id="${escapeHtml(w.id)}" aria-pressed="${isDone}">
+                    ${isDone ? "✓ Tamamlandı" : "○ İşaretle"}
+                  </button>
+                </div>
+                <h5 style="margin:6px 0;">${escapeHtml(w.title)}</h5>
+                <ul class="clean-list small">
+                  ${(w.tasks || []).map((t) => `<li>${escapeHtml(t)}</li>`).join("")}
+                </ul>
+                <div class="where-used-box small"><strong>Nerede İşe Yarar?</strong> ${escapeHtml(w.whereUsed)}</div>
+                ${links ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${links}</div>` : ""}
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ---------- 3. Tarih & Olay Örgüsü ---------- */
+  function renderHistoryTab() {
+    if (!DATA) return;
+    const storySection = $("storyArcSection");
+    const listSection = $("timelineListSection");
+    const storyBtn = $("histModeStoryBtn");
+    const listBtn = $("histModeListBtn");
+
+    if (storySection && listSection) {
+      if (histViewMode === "story") {
+        storySection.removeAttribute("hidden");
+        listSection.setAttribute("hidden", "");
+      } else {
+        storySection.setAttribute("hidden", "");
+        listSection.removeAttribute("hidden");
+      }
+    }
+    if (storyBtn) storyBtn.classList.toggle("active", histViewMode === "story");
+    if (listBtn) listBtn.classList.toggle("active", histViewMode === "list");
+
+    const arcsGrid = $("storyArcsGrid");
+    if (arcsGrid && Array.isArray(DATA.STORY_ARCS)) {
+      const arcUse = DATA.STORY_ARC_USE_CASES || {};
+      arcsGrid.innerHTML = DATA.STORY_ARCS.map((arc) => `
+        <article class="card">
+          <div class="card-head">
+            <span class="badge badge-brand">${escapeHtml(arc.act)}</span>
+          </div>
+          <h4 class="card-title">${escapeHtml(arc.title)}</h4>
+          <p class="small"><strong>Sahne:</strong> ${escapeHtml(arc.scene)}</p>
+          <p class="small"><strong>Çarpılan Duvar:</strong> ${escapeHtml(arc.wall)}</p>
+          <p class="small"><strong>Kırılma Anı:</strong> ${escapeHtml(arc.breakthrough)}</p>
+          <p class="small muted"><strong>Sonraki Köprü:</strong> ${escapeHtml(arc.bridge)}</p>
+          ${arcUse[arc.id] ? `<div class="where-used-box small"><strong>Bugün Nerede İşe Yarar?</strong> ${escapeHtml(arcUse[arc.id])}</div>` : ""}
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+            ${(arc.paperIds || []).map((pid) => `<button type="button" class="btn btn-xs" data-jump-paper="${escapeHtml(pid)}">${escapeHtml(pid)} →</button>`).join("")}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    const synGrid = $("historySynthesisGrid");
+    if (synGrid && Array.isArray(DATA.HISTORY_SYNTHESIS)) {
+      synGrid.innerHTML = DATA.HISTORY_SYNTHESIS.map((s) => `
+        <article class="card">
+          <span class="badge">${escapeHtml(s.credibilityType)}</span>
+          <h4 class="card-title" style="margin-top:6px;">${escapeHtml(s.title)}</h4>
+          <p class="small muted">${escapeHtml(s.author)} · ${escapeHtml(s.venue)}</p>
+          <p class="small">${escapeHtml(s.note)}</p>
+          <div class="card-foot">
+            <span></span>
+            <a class="btn btn-xs btn-primary" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">Aç ↗</a>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    renderTimelineList();
+  }
+
+  function renderTimelineList() {
+    const listEl = $("timelineList");
+    if (!listEl || !DATA || !Array.isArray(DATA.TIMELINE_ITEMS)) return;
+
+    const q = ($("timelineSearch") ? $("timelineSearch").value : "").trim().toLowerCase();
+    const era = $("timelineEraFilter") ? $("timelineEraFilter").value : "all";
+    const role = $("timelineRoleFilter") ? $("timelineRoleFilter").value : "all";
+
+    const filtered = DATA.TIMELINE_ITEMS.filter((item) => {
+      if (era !== "all" && item.era !== era) return false;
+      if (role !== "all" && !(item.roles || []).includes(role)) return false;
+      if (q) {
+        const hay = `${item.id} ${item.year} ${item.title} ${item.authors} ${item.whyItMatters} ${item.whatYouLearn}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const badge = $("timelineCountBadge");
+    if (badge) badge.textContent = `${filtered.length} makale`;
+
+    listEl.innerHTML = filtered.map((item) => `
+      <article class="card" id="timeline-${escapeHtml(item.id)}">
+        <div class="card-head">
+          <div>
+            <span class="badge badge-brand">${escapeHtml(item.year)}</span>
+            <span class="badge">${escapeHtml(item.credibilityType)}</span>
+          </div>
+          <span class="small muted">${escapeHtml(item.venue)}</span>
+        </div>
+        <h4 class="card-title" style="margin-top:6px;">${escapeHtml(item.title)}</h4>
+        <p class="small muted">${escapeHtml(item.authors)}</p>
+        <p class="small"><strong>Neden Önemli?</strong> ${escapeHtml(item.whyItMatters)}</p>
+        <p class="small"><strong>Ne Öğrenirsin?</strong> ${escapeHtml(item.whatYouLearn)}</p>
+        <div class="card-foot">
+          <div style="display:flex; flex-wrap:wrap; gap:4px;">
+            ${(item.roles || []).map((r) => `<span class="badge badge-role">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("")}
+          </div>
+          <a class="btn btn-xs btn-primary" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Makale ↗</a>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  /* ---------- 4. Araçlar: VRAM & Chinchilla Hesaplayıcıları (v2 Formülleri Korundu) ---------- */
+  function applyVramPreset(presetKey) {
+    const preset = VRAM_PRESETS[presetKey];
+    if (!preset || !HAS_DOC) return;
+    const setVal = (id, val) => { const el = $(id); if (el) el.value = String(val); };
+    const setChk = (id, val) => { const el = $(id); if (el) el.checked = Boolean(val); };
+    setVal("vramParamsM", preset.paramsM);
+    setVal("vramMode", preset.mode);
+    setVal("vramBatch", preset.batch);
+    setVal("vramSeq", preset.seq);
+    setVal("vramHidden", preset.hidden);
+    setVal("vramLayers", preset.layers);
+    setChk("vramGradCkpt", preset.gradCkpt);
+    setChk("vramUnsloth", preset.unsloth);
+    updateVramCalc();
+  }
+
+  function updateVramCalc() {
+    if (!HAS_DOC || !$("vramParamsM")) return;
+    const paramsM = Number($("vramParamsM").value) || 124;
+    const mode = $("vramMode").value;
+    const batch = Math.max(1, Number($("vramBatch").value) || 1);
+    const seq = Math.max(64, Number($("vramSeq").value) || 512);
+    const hidden = Math.max(64, Number($("vramHidden").value) || 768);
+    const layers = Math.max(1, Number($("vramLayers").value) || 12);
+    const gradCkpt = $("vramGradCkpt").checked;
+    const unsloth = $("vramUnsloth").checked;
+
+    $("vramParamsLabel").textContent = `${paramsM >= 1000 ? (paramsM / 1000).toFixed(2) + " B" : paramsM + " M"}`;
 
     const N = paramsM * 1e6;
     const GIB = 1024 ** 3;
@@ -979,10 +1105,10 @@
     const actGb = actBytes / GIB + cudaOverheadGb;
     const totalGb = staticGb + actGb;
 
-    document.getElementById("vramStaticGb").textContent = `${staticGb.toFixed(2)} GB`;
-    document.getElementById("vramActGb").textContent = `${actGb.toFixed(2)} GB`;
-    document.getElementById("vramTotalGb").textContent = `${totalGb.toFixed(2)} GB`;
-    document.getElementById("vramBreakdownText").textContent = breakdown;
+    $("vramStaticGb").textContent = `${staticGb.toFixed(2)} GB`;
+    $("vramActGb").textContent = `${actGb.toFixed(2)} GB`;
+    $("vramTotalGb").textContent = `${totalGb.toFixed(2)} GB`;
+    $("vramBreakdownText").textContent = breakdown;
 
     const gpus = [
       { name: "Colab Free T4 (15 GB)", cap: 15 },
@@ -992,21 +1118,22 @@
       { name: "A100 / H100 (80 GB)", cap: 80 }
     ];
 
-    document.getElementById("vramGpuCompat").innerHTML = gpus.map((g) => {
+    $("vramGpuCompat").innerHTML = gpus.map((g) => {
       const fits = totalGb <= g.cap * 0.92;
       return `<span class="gpu-pill ${fits ? "ok" : "no"}">${fits ? "✓ Sığar" : "✕ Aşar"} • ${escapeHtml(g.name)}</span>`;
     }).join("");
   }
 
   function updateChinchillaCalc() {
-    const paramsM = Number(document.getElementById("chParamsM").value) || 124;
-    const tokensB = Number(document.getElementById("chTokensB").value) || 2.5;
-    const hwTflops = Number(document.getElementById("chHardware").value) || 65;
-    const mfu = Number(document.getElementById("chMfu").value) || 35;
+    if (!HAS_DOC || !$("chParamsM")) return;
+    const paramsM = Number($("chParamsM").value) || 124;
+    const tokensB = Number($("chTokensB").value) || 2.5;
+    const hwTflops = Number($("chHardware").value) || 65;
+    const mfu = Number($("chMfu").value) || 35;
 
-    document.getElementById("chParamsLabel").textContent = `${paramsM >= 1000 ? (paramsM / 1000).toFixed(2) + " B" : paramsM + " M"}`;
-    document.getElementById("chTokensLabel").textContent = `${tokensB.toFixed(1)} B`;
-    document.getElementById("chMfuLabel").textContent = `%${mfu}`;
+    $("chParamsLabel").textContent = `${paramsM >= 1000 ? (paramsM / 1000).toFixed(2) + " B" : paramsM + " M"}`;
+    $("chTokensLabel").textContent = `${tokensB.toFixed(1)} B`;
+    $("chMfuLabel").textContent = `%${mfu}`;
 
     const N = paramsM * 1e6;
     const D = tokensB * 1e9;
@@ -1016,9 +1143,9 @@
     const hours = totalFlops / effFlopsPerSec / 3600;
     const ratio = D / N;
 
-    document.getElementById("chOptimalTokens").textContent = `${optTokensB.toFixed(2)} B Token`;
-    document.getElementById("chTotalFlops").textContent = `${totalFlops.toExponential(2)} FLOPs`;
-    document.getElementById("chEstHours").textContent = hours < 1 ? `${(hours * 60).toFixed(1)} dk` : `${hours.toFixed(1)} saat`;
+    $("chOptimalTokens").textContent = `${optTokensB.toFixed(2)} B Token`;
+    $("chTotalFlops").textContent = `${totalFlops.toExponential(2)} FLOPs`;
+    $("chEstHours").textContent = hours < 1 ? `${(hours * 60).toFixed(1)} dk` : `${hours.toFixed(1)} saat`;
 
     let ratioMsg = `Token / Parametre oranı: ${ratio.toFixed(1)}×. `;
     if (ratio < 15) {
@@ -1028,727 +1155,833 @@
     } else {
       ratioMsg += "Chinchilla ötesi aşırı-eğitim (overtraining) bölgesi: TinyLlama/SmolLM2 gibi küçük modeli uzun süre eğiterek çıkarım hızını koruma stratejisi.";
     }
-    document.getElementById("chRatioNote").textContent = ratioMsg;
+    $("chRatioNote").textContent = ratioMsg;
   }
 
-  /* 5. Zero Budget & Free Compute */
-  function renderFreeCompute() {
-    const grid = document.getElementById("freeComputeGrid");
-    if (grid) {
-      grid.innerHTML = DATA.FREE_COMPUTE.resources.map((r) => `
+  function renderToolsTab() {
+    if (!DATA) return;
+
+    const computeGrid = $("computeGrid");
+    if (computeGrid && DATA.FREE_COMPUTE) {
+      computeGrid.innerHTML = (DATA.FREE_COMPUTE.resources || []).map((r) => `
         <article class="card">
-          <div class="card-head">
-            <div>
-              <span class="badge badge-compute">${escapeHtml(r.provider)}</span>
-              <h4 class="card-title" style="margin-top:6px;">${escapeHtml(r.name)}</h4>
-            </div>
-          </div>
-          <div class="card-body">
-            <p><strong>Doğrulanmış Kota / İmkân:</strong> ${escapeHtml(r.quota)}</p>
-            <p class="small muted"><strong>Sınır &amp; Şartlar:</strong> ${escapeHtml(r.limits)}</p>
-            <p class="small"><strong>5 Kişilik Ekip İçin Kullanım:</strong> ${escapeHtml(r.bestFor)}</p>
-          </div>
+          <span class="badge badge-brand">${escapeHtml(r.provider)}</span>
+          <h4 class="card-title" style="margin-top:6px;">${escapeHtml(r.name)}</h4>
+          <p class="small"><strong>Kota:</strong> ${escapeHtml(r.quota)}</p>
+          <p class="small muted"><strong>Sınırlar:</strong> ${escapeHtml(r.limits)}</p>
+          <p class="small"><strong>Ekip Kullanımı:</strong> ${escapeHtml(r.bestFor)}</p>
           <div class="card-foot">
             <span></span>
             <div style="display:flex; gap:6px;">
-              ${r.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(r.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Kılavuz / Portal ↗</a>` : ""}
-              <a class="btn btn-primary btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Resmî Sayfa ↗</a>
+              ${r.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(r.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Kılavuz ↗</a>` : ""}
+              <a class="btn btn-xs btn-primary" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Aç ↗</a>
             </div>
           </div>
         </article>
       `).join("");
     }
 
-    const ladder = document.getElementById("zeroBudgetLadder");
-    if (ladder) {
-      ladder.innerHTML = DATA.FREE_COMPUTE.ladder.map((l) => `
+    const computeLadder = $("computeLadder");
+    if (computeLadder && DATA.FREE_COMPUTE) {
+      computeLadder.innerHTML = (DATA.FREE_COMPUTE.ladder || []).map((l) => `
         <article class="card">
-          <h4 class="card-title grad-text">${escapeHtml(l.step)}</h4>
-          <div class="card-meta"><strong>Donanım:</strong> ${escapeHtml(l.hardware)}</div>
-          <div class="card-body">
-            <p><strong>Hedef:</strong> ${escapeHtml(l.goal)}</p>
-            <p class="small muted"><strong>Neden Bu Sıra?</strong> ${escapeHtml(l.why)}</p>
-          </div>
+          <h4 class="card-title">${escapeHtml(l.step)}</h4>
+          <p class="small muted"><strong>Donanım:</strong> ${escapeHtml(l.hardware)}</p>
+          <p class="small"><strong>Hedef:</strong> ${escapeHtml(l.goal)}</p>
+          <p class="small muted">${escapeHtml(l.why)}</p>
         </article>
       `).join("");
     }
-  }
 
-  /* 6. AI Tutor Science */
-  function copyTextWithFeedback(text, btn, defaultLabel) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        btn.textContent = "Kopyalandı ✓";
-        setTimeout(() => { btn.textContent = defaultLabel; }, 1800);
-      });
-    } else {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      btn.textContent = "Kopyalandı ✓";
-      setTimeout(() => { btn.textContent = defaultLabel; }, 1800);
+    if (DATA.AI_TUTOR_SCIENCE) {
+      const ai = DATA.AI_TUTOR_SCIENCE;
+      const introEl = $("aiTutorIntro");
+      if (introEl) introEl.textContent = ai.intro || "";
+
+      const studiesEl = $("aiStudiesGrid");
+      if (studiesEl) {
+        studiesEl.innerHTML = (ai.studies || []).map((s) => `
+          <article class="card">
+            <span class="badge">${escapeHtml(s.venue)}</span>
+            <h4 class="card-title" style="margin-top:6px;">${escapeHtml(s.title)}</h4>
+            <p class="small muted">${escapeHtml(s.authors)}</p>
+            <p class="small">${escapeHtml(s.finding)}</p>
+            <div class="card-foot"><span></span><a class="btn btn-xs" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">Araştırma ↗</a></div>
+          </article>
+        `).join("");
+      }
+
+      const rulesEl = $("aiRulesList");
+      if (rulesEl) {
+        rulesEl.innerHTML = (ai.rules || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+      }
+
+      const promptEl = $("socraticPromptText");
+      if (promptEl) promptEl.textContent = ai.socraticPrompt || "";
     }
-  }
 
-  function renderAiTutor() {
-    const intro = document.getElementById("aiTutorIntro");
-    if (intro) intro.textContent = DATA.AI_TUTOR_SCIENCE.intro;
-
-    const grid = document.getElementById("aiStudiesGrid");
-    if (grid) {
-      grid.innerHTML = DATA.AI_TUTOR_SCIENCE.studies.map((s) => `
+    const stuckEl = $("stuckPromptsGrid");
+    if (stuckEl && DATA.BEGINNER_GUIDE) {
+      stuckEl.innerHTML = (DATA.BEGINNER_GUIDE.stuckPrompts || []).map((p) => `
         <article class="card">
           <div class="card-head">
-            <h4 class="card-title">${escapeHtml(s.title)}</h4>
-            <span class="badge badge-paper">${escapeHtml(s.venue)}</span>
+            <h4 class="card-title">${escapeHtml(p.title)}</h4>
+            <button type="button" class="btn btn-xs" data-copy-prompt="${escapeHtml(p.prompt)}">Kopyala</button>
           </div>
-          <div class="card-meta">${escapeHtml(s.authors)}</div>
-          <div class="card-body"><p>${escapeHtml(s.finding)}</p></div>
-          <div class="card-foot">
-            <span></span>
-            <a class="btn btn-primary btn-xs" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">Makaleyi Aç ↗</a>
-          </div>
+          <p class="small muted">${escapeHtml(p.prompt)}</p>
         </article>
       `).join("");
     }
 
-    const rulesEl = document.getElementById("aiRulesList");
-    if (rulesEl) {
-      rulesEl.innerHTML = `<ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px;">
-        ${DATA.AI_TUTOR_SCIENCE.rules.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}
-      </ol>`;
+    if (DATA.TEAM_PLAN) {
+      const rolesEl = $("teamRolesGrid");
+      if (rolesEl) {
+        rolesEl.innerHTML = (DATA.TEAM_PLAN.roles || []).map((r) => `
+          <article class="card">
+            <span class="badge badge-role">${escapeHtml(r.id)}</span>
+            <h4 class="card-title" style="margin-top:6px;">${escapeHtml(r.name)}</h4>
+            <p class="small">${escapeHtml(r.focus)}</p>
+            <p class="small muted"><strong>İlk Ay Görevi:</strong> ${escapeHtml(r.firstMonthTask)}</p>
+          </article>
+        `).join("");
+      }
+
+      const phasesEl = $("teamPhasesGrid");
+      if (phasesEl) {
+        phasesEl.innerHTML = (DATA.TEAM_PLAN.phases || []).map((ph) => `
+          <article class="card">
+            <h4 class="card-title">${escapeHtml(ph.phase)}</h4>
+            <p class="small"><strong>Hedef:</strong> ${escapeHtml(ph.objective)}</p>
+            <ul class="clean-list small">
+              ${(ph.milestones || []).map((ms) => `<li>${escapeHtml(ms)}</li>`).join("")}
+            </ul>
+          </article>
+        `).join("");
+      }
     }
 
-    const promptEl = document.getElementById("socraticPromptText");
-    if (promptEl) promptEl.textContent = DATA.AI_TUTOR_SCIENCE.socraticPrompt;
+    updateVramCalc();
+    updateChinchillaCalc();
+  }
 
-    const copyBtn = document.getElementById("copyPromptBtn");
-    if (copyBtn) {
-      copyBtn.addEventListener("click", () => {
-        copyTextWithFeedback(DATA.AI_TUTOR_SCIENCE.socraticPrompt, copyBtn, "İstemi Kopyala");
+  /* ---------- 5. Kütüphane & Denetim ---------- */
+  function populateLibraryFilters() {
+    if (!DATA || !Array.isArray(DATA.ALL_RESOURCES)) return;
+    const catSelect = $("libCategoryFilter");
+    if (catSelect && catSelect.options.length <= 1) {
+      const cats = Array.from(new Set(DATA.ALL_RESOURCES.map((r) => r.category).filter(Boolean)));
+      cats.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        catSelect.appendChild(opt);
+      });
+    }
+    const lvlSelect = $("libLevelFilter");
+    if (lvlSelect && lvlSelect.options.length <= 1) {
+      const lvls = Array.from(new Set(DATA.ALL_RESOURCES.map((r) => r.level).filter(Boolean)));
+      lvls.forEach((l) => {
+        const opt = document.createElement("option");
+        opt.value = l;
+        opt.textContent = l;
+        lvlSelect.appendChild(opt);
       });
     }
   }
 
-  /* 7. Team Plan */
-  function renderTeamPlan() {
-    const rolesGrid = document.getElementById("teamRolesGrid");
-    if (rolesGrid) {
-      rolesGrid.innerHTML = DATA.TEAM_PLAN.roles.map((r) => `
-        <article class="card">
-          <h4 class="card-title grad-text">${escapeHtml(r.name)}</h4>
-          <div class="card-body">
-            <p><strong>Sorumluluk Alanı:</strong> ${escapeHtml(r.focus)}</p>
-            <p class="small muted"><strong>İlk Ay Görevi:</strong> ${escapeHtml(r.firstMonthTask)}</p>
-          </div>
-        </article>
-      `).join("");
-    }
-
-    const phasesList = document.getElementById("teamPhasesList");
-    if (phasesList) {
-      phasesList.innerHTML = DATA.TEAM_PLAN.phases.map((p) => `
-        <article class="card">
-          <h4 class="card-title">${escapeHtml(p.phase)}</h4>
-          <div class="card-meta"><strong>Amaç:</strong> ${escapeHtml(p.objective)}</div>
-          <div class="card-body">
-            <ul style="margin:6px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:6px;">
-              ${p.milestones.map((m) => `<li class="small">${escapeHtml(m)}</li>`).join("")}
-            </ul>
-          </div>
-        </article>
-      `).join("");
-    }
+  function renderLibraryTab() {
+    populateLibraryFilters();
+    renderLibraryGrid();
+    renderAuditTable();
   }
 
-  /* 8. Credential Audit */
-  function initAuditFilters() {
-    const sel = document.getElementById("auditCategorySelect");
-    if (!sel) return;
-    Array.from(new Set(DATA.CREDENTIAL_AUDIT.map((a) => a.category))).sort().forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      sel.appendChild(opt);
-    });
-  }
+  function renderLibraryGrid() {
+    const grid = $("libraryGrid");
+    if (!grid || !DATA || !Array.isArray(DATA.ALL_RESOURCES)) return;
+    const member = getActiveMember();
+    const catUse = DATA.CATEGORY_USE_CASES || {};
 
-  function renderAuditTable() {
-    const q = (document.getElementById("auditSearch").value || "").trim().toLowerCase();
-    const cat = document.getElementById("auditCategorySelect").value;
-    const tbody = document.getElementById("auditTableBody");
-    const badge = document.getElementById("auditCountBadge");
-    if (!tbody) return;
-
-    const filtered = DATA.CREDENTIAL_AUDIT.filter((a) => {
-      if (cat !== "all" && a.category !== cat) return false;
-      if (!q) return true;
-      return `${a.resourceName} ${a.category} ${a.authorCredentials} ${a.caveat}`.toLowerCase().includes(q);
-    });
-
-    if (badge) badge.textContent = `${filtered.length} kaynak`;
-
-    tbody.innerHTML = filtered.map((a) => `
-      <tr>
-        <td>
-          <strong><a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(a.resourceName)} ↗</a></strong>
-          <div style="margin-top:6px;"><span class="badge ${badgeClassForType(a.category)}">${escapeHtml(a.category)}</span></div>
-        </td>
-        <td>${escapeHtml(a.authorCredentials)}</td>
-        <td><div class="caveat-box">${escapeHtml(a.caveat)}</div></td>
-      </tr>
-    `).join("");
-  }
-
-  /* 9. Full Library */
-  function initLibraryFilters() {
-    const catSel = document.getElementById("libCategorySelect");
-    const typeSel = document.getElementById("libTypeSelect");
-    if (!catSel || !typeSel) return;
-
-    Array.from(new Set(DATA.ALL_RESOURCES.map((r) => r.category))).sort().forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      catSel.appendChild(opt);
-    });
-
-    Array.from(new Set(DATA.ALL_RESOURCES.map((r) => r.type))).sort().forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
-      typeSel.appendChild(opt);
-    });
-  }
-
-  function renderLibrary() {
-    const q = (document.getElementById("libSearch").value || "").trim().toLowerCase();
-    const cat = document.getElementById("libCategorySelect").value;
-    const typ = document.getElementById("libTypeSelect").value;
-    const lvl = document.getElementById("libLevelSelect").value;
-    const role = document.getElementById("libRoleSelect").value;
-    const prof = getActiveProfile();
-
-    const grid = document.getElementById("libraryGrid");
-    const badge = document.getElementById("libCountBadge");
-    if (!grid) return;
+    const q = ($("libSearch") ? $("libSearch").value : "").trim().toLowerCase();
+    const cat = $("libCategoryFilter") ? $("libCategoryFilter").value : "all";
+    const lvl = $("libLevelFilter") ? $("libLevelFilter").value : "all";
+    const role = $("libRoleFilter") ? $("libRoleFilter").value : "all";
 
     const filtered = DATA.ALL_RESOURCES.filter((r) => {
-      const key = resourceKey(r);
-      const st = prof.statuses[key] || "todo";
       if (cat !== "all" && r.category !== cat) return false;
-      if (typ !== "all" && r.type !== typ) return false;
       if (lvl !== "all" && r.level !== lvl) return false;
-      if (role !== "all" && (!Array.isArray(r.roles) || !r.roles.includes(role))) return false;
-
-      if (activeLibStatus === "doing" && st !== "doing") return false;
-      if (activeLibStatus === "done" && st !== "done") return false;
-      if (activeLibStatus === "todo" && st !== "todo") return false;
-      if (activeLibStatus === "starred" && !prof.stars[key]) return false;
-      if (activeLibStatus === "recommended" && !isRecommendedItem(r)) return false;
-
-      if (!q) return true;
-      return `${r.year} ${r.title} ${r.authors} ${r.category} ${r.summary}`.toLowerCase().includes(q);
+      if (role !== "all" && !(r.roles || []).includes(role)) return false;
+      if (libBookmarkOnly && !member.bookmarks[r.id]) return false;
+      if (q) {
+        const hay = `${r.title} ${r.authors} ${r.category} ${r.summary}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
     });
 
+    const badge = $("libCountBadge");
     if (badge) badge.textContent = `${filtered.length} kaynak`;
 
-    if (filtered.length === 0) {
-      grid.innerHTML = `<div class="callout">Seçili filtrelere uyan kaynak bulunamadı.</div>`;
-      return;
-    }
-
     grid.innerHTML = filtered.map((r) => {
-      const key = resourceKey(r);
-      const st = prof.statuses[key] || "todo";
-      const rec = isRecommendedItem(r);
+      const isFav = Boolean(member.bookmarks[r.id]);
+      const useText = catUse[r.category];
       return `
-        <article class="card ${st === "done" ? "is-done" : st === "doing" ? "is-doing" : ""} ${rec ? "is-recommended" : ""}" data-res-key="${escapeHtml(key)}">
+        <article class="card">
           <div class="card-head">
             <div>
-              <div class="badge-row" style="margin-bottom:6px;">
-                <span class="year-pill">${escapeHtml(r.year)}</span>
-                <span class="badge ${badgeClassForType(r.type)}">${escapeHtml(r.type)}</span>
-                <span class="badge badge-neutral">${escapeHtml(r.level)}</span>
-                ${accessBadge(r.access)}
-                ${rec ? `<span class="badge badge-rec">✨ Önerilen</span>` : ""}
-              </div>
-              <h4 class="card-title">${escapeHtml(r.title)}</h4>
-              <div class="card-meta">${escapeHtml(r.authors)} • ${escapeHtml(r.category)}</div>
+              <span class="badge">${escapeHtml(r.category)}</span>
+              <span class="badge">${escapeHtml(r.level)}</span>
+              ${r.year ? `<span class="small muted">${escapeHtml(r.year)}</span>` : ""}
             </div>
-            ${renderItemControlsHtml(key)}
+            <button type="button" class="btn btn-xs ${isFav ? "btn-primary" : ""}" data-bookmark-id="${escapeHtml(r.id)}" aria-pressed="${isFav}">
+              ${isFav ? "★ Kayıtlı" : "☆ Kaydet"}
+            </button>
           </div>
-          <div class="card-body">
-            <p class="small">${escapeHtml(r.summary)}</p>
-            ${renderNoteBoxHtml(key)}
-          </div>
+          <h4 class="card-title" style="margin-top:6px;">${escapeHtml(r.title)}</h4>
+          <p class="small muted">${escapeHtml(r.authors)}</p>
+          <p class="small">${escapeHtml(r.summary)}</p>
+          ${useText ? `<div class="where-used-box small"><strong>Nerede İşe Yarar?</strong> ${escapeHtml(useText)}</div>` : ""}
           <div class="card-foot">
-            <div class="badge-row">${roleBadges(r.roles)}</div>
-            <div style="display:flex; gap:6px;">
-              ${r.secondaryUrl ? `<a class="btn btn-xs" href="${escapeHtml(r.secondaryUrl)}" target="_blank" rel="noopener noreferrer">Ek Link ↗</a>` : ""}
-              <a class="btn btn-primary btn-xs" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Aç ↗</a>
-            </div>
+            <span class="small muted">${escapeHtml(r.access || "")}</span>
+            <a class="btn btn-xs btn-primary" href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Aç ↗</a>
           </div>
         </article>
       `;
     }).join("");
   }
 
-  /* Lintu Mascot Tour & Contextual Popover */
-  function renderTourStep() {
-    const steps = DATA.MASCOT_TOUR_STEPS;
-    if (!Array.isArray(steps) || steps.length === 0) return;
-    if (tourStepIndex < 0) tourStepIndex = 0;
-    if (tourStepIndex >= steps.length) tourStepIndex = steps.length - 1;
-
-    const s = steps[tourStepIndex];
-    document.getElementById("tourEyebrow").textContent = s.eyebrow;
-    document.getElementById("tourTitle").textContent = s.title;
-    document.getElementById("tourSay").textContent = s.say;
-    document.getElementById("tourPreviewTitle").textContent = s.previewTitle;
-    document.getElementById("tourPreviewList").innerHTML = s.previewItems.map((i) => `<li>${escapeHtml(i)}</li>`).join("");
-
-    const dotsEl = document.getElementById("tourDots");
-    if (dotsEl) {
-      dotsEl.innerHTML = steps.map((st, idx) =>
-        `<button class="tour-dot ${idx === tourStepIndex ? "active" : ""}" data-tour-idx="${idx}" type="button" aria-label="Adım ${idx + 1}: ${escapeHtml(st.title)}"></button>`
-      ).join("");
-    }
-
-    const prevBtn = document.getElementById("tourPrevBtn");
-    const nextBtn = document.getElementById("tourNextBtn");
-    if (prevBtn) prevBtn.disabled = tourStepIndex === 0;
-    if (nextBtn) nextBtn.textContent = tourStepIndex === steps.length - 1 ? "Hadi Başlayalım ✓" : "İleri →";
+  function classifyAuditTier(item) {
+    if (item.tier) return item.tier;
+    const cat = String(item.category || "");
+    if (/kurumsal|enstitü|üniversite|resmî|platform/i.test(cat)) return "institution";
+    if (/akademik|kitap|bildiri/i.test(cat)) return "peer-reviewed";
+    return "non-peer-reviewed";
   }
 
-  function openTour(startIndex) {
-    tourStepIndex = typeof startIndex === "number" ? startIndex : 0;
+  function renderAuditTable() {
+    const tbody = $("auditTableBody");
+    if (!tbody || !DATA || !Array.isArray(DATA.CREDENTIAL_AUDIT)) return;
+
+    const q = ($("auditSearch") ? $("auditSearch").value : "").trim().toLowerCase();
+    const tier = $("auditTierFilter") ? $("auditTierFilter").value : "all";
+
+    const filtered = DATA.CREDENTIAL_AUDIT.filter((a) => {
+      if (tier !== "all" && classifyAuditTier(a) !== tier) return false;
+      if (q) {
+        const hay = `${a.resourceName} ${a.category} ${a.authorCredentials} ${a.caveat}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const badge = $("auditCountBadge");
+    if (badge) badge.textContent = `${filtered.length} kayıt`;
+
+    tbody.innerHTML = filtered.map((a) => `
+      <tr>
+        <td><a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer"><strong>${escapeHtml(a.resourceName)}</strong> ↗</a></td>
+        <td>${escapeHtml(a.category)}</td>
+        <td>${escapeHtml(a.authorCredentials)}</td>
+        <td>${escapeHtml(a.caveat)}</td>
+      </tr>
+    `).join("");
+  }
+
+  /* ---------- İlerleme & Yedek Modalı ---------- */
+  function openProgressModal() {
+    const modal = $("progressModal");
+    if (!modal) return;
+    renderProgressModal();
+    modal.removeAttribute("hidden");
+  }
+
+  function closeProgressModal() {
+    const modal = $("progressModal");
+    if (modal) modal.setAttribute("hidden", "");
+  }
+
+  function renderProgressModal() {
+    const member = getActiveMember();
+
+    const memberSelect = $("modalMemberSelect");
+    if (memberSelect) {
+      memberSelect.innerHTML = Object.keys(appState.members).map((name) => `
+        <option value="${escapeHtml(name)}" ${name === appState.activeMember ? "selected" : ""}>${escapeHtml(name)}</option>
+      `).join("");
+    }
+
+    const roleSelect = $("modalRoleSelect");
+    if (roleSelect) {
+      roleSelect.value = member.role;
+    }
+
+    const m = getProgressMetrics();
+    const favCount = Object.keys(member.bookmarks || {}).filter((k) => member.bookmarks[k]).length;
+
+    const statsEl = $("modalOverallStats");
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="stat-pill"><span>Genel İlerleme</span><strong>%${m.pct}</strong></div>
+        <div class="stat-pill"><span>Konular</span><strong>${m.doneTopics}/${m.totalTopics}</strong></div>
+        <div class="stat-pill"><span>Haftalar</span><strong>${m.doneWeeks}/${m.totalWeeks}</strong></div>
+        <div class="stat-pill"><span>Yer İmleri</span><strong>${favCount}</strong></div>
+      `;
+    }
+
+    const lvlBars = $("modalLevelBars");
+    if (lvlBars && DATA && Array.isArray(DATA.LEVEL_GROUPS)) {
+      lvlBars.innerHTML = DATA.LEVEL_GROUPS.map((lvl) => {
+        const done = (lvl.topics || []).filter((t) => member.topics[t.id]).length;
+        const total = (lvl.topics || []).length || 1;
+        const pct = Math.round((done / total) * 100);
+        return `
+          <div class="progress-bar-row">
+            <span>${escapeHtml(lvl.badge)}</span>
+            <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+            <strong>${done}/${total}</strong>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const qBars = $("modalQuarterBars");
+    if (qBars && DATA && Array.isArray(DATA.ANNUAL_CALENDAR)) {
+      const quarters = {};
+      DATA.ANNUAL_CALENDAR.forEach((mo) => {
+        if (!quarters[mo.quarter]) quarters[mo.quarter] = { done: 0, total: 0 };
+        (mo.weeks || []).forEach((w) => {
+          quarters[mo.quarter].total += 1;
+          if (member.weeks[w.id]) quarters[mo.quarter].done += 1;
+        });
+      });
+      qBars.innerHTML = Object.entries(quarters).map(([q, st]) => {
+        const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
+        return `
+          <div class="progress-bar-row">
+            <span>${escapeHtml(q)}</span>
+            <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+            <strong>${st.done}/${st.total}</strong>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const syncOut = $("syncCodeOutput");
+    if (syncOut) {
+      const code = encodeSyncCode();
+      if ("value" in syncOut) syncOut.value = code;
+      else syncOut.textContent = code;
+    }
+  }
+
+  function downloadFile(filename, content, mime) {
+    if (!HAS_DOC) return;
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportObsidianMarkdown() {
+    const member = getActiveMember();
+    const m = getProgressMetrics();
+    const resMap = getResourceMap();
+    const lines = [
+      `# Lintu AI Yol Haritası — ${appState.activeMember}`,
+      `- **Rol:** ${ROLE_LABELS[member.role] || member.role}`,
+      `- **Başlangıç:** ${formatCalendarMonthLabel(1, appState.startMonth)}`,
+      `- **Genel İlerleme:** %${m.pct} (${m.doneTopics}/${m.totalTopics} konu, ${m.doneWeeks}/${m.totalWeeks} hafta)`,
+      "",
+      "## Tamamlanan Konular"
+    ];
+    if (DATA && Array.isArray(DATA.LEVEL_GROUPS)) {
+      DATA.LEVEL_GROUPS.forEach((lvl) => {
+        (lvl.topics || []).forEach((t) => {
+          lines.push(`- [${member.topics[t.id] ? "x" : " "}] ${lvl.badge}: ${t.title}`);
+        });
+      });
+    }
+    lines.push("", "## Kaydedilen Kaynaklar");
+    Object.keys(member.bookmarks || {}).forEach((rid) => {
+      if (member.bookmarks[rid] && resMap[rid]) {
+        lines.push(`- [${resMap[rid].title}](${resMap[rid].url})`);
+      }
+    });
+    downloadFile(`lintu-ai-${appState.activeMember.toLowerCase()}.md`, lines.join("\n"), "text/markdown;charset=utf-8");
+    showToast("Obsidian .md özeti indirildi.");
+  }
+
+  /* ---------- Lintu Maskot Turu ---------- */
+  function openTour(stepIdx) {
+    const overlay = $("tourOverlay");
+    if (!overlay || !DATA || !Array.isArray(DATA.MASCOT_TOUR_STEPS)) return;
+    tourStepIndex = Math.max(0, Math.min(stepIdx || 0, DATA.MASCOT_TOUR_STEPS.length - 1));
     renderTourStep();
-    const modal = document.getElementById("mascotTourModal");
-    if (modal) modal.classList.add("open");
-    const pop = document.getElementById("mascotPopover");
-    if (pop) pop.classList.remove("open");
+    overlay.removeAttribute("hidden");
   }
 
   function closeTour() {
-    const modal = document.getElementById("mascotTourModal");
-    if (modal) modal.classList.remove("open");
-    const chk = document.getElementById("tourDontShowCheck");
-    try {
-      if (chk && chk.checked) {
-        localStorage.setItem(STORAGE_KEY_TOUR, "1");
-      } else {
-        localStorage.setItem(STORAGE_KEY_TOUR, "1");
-      }
-    } catch (e) {}
-  }
-
-  function updateMascotTip(tabId) {
-    const tips = DATA.MASCOT_TAB_TIPS || {};
-    const txt = document.getElementById("mascotPopoverText");
-    if (txt) {
-      txt.textContent = tips[tabId] || tips["genel-bakis"] || "";
+    const overlay = $("tourOverlay");
+    if (overlay) overlay.setAttribute("hidden", "");
+    if (typeof localStorage !== "undefined") {
+      try { localStorage.setItem(STORAGE_KEY_TOUR, "1"); } catch (_) {}
     }
   }
 
-  /* Event Wiring */
+  function renderTourStep() {
+    if (!DATA || !Array.isArray(DATA.MASCOT_TOUR_STEPS)) return;
+    const steps = DATA.MASCOT_TOUR_STEPS;
+    const step = steps[tourStepIndex];
+    if (!step) return;
+
+    const lbl = $("tourProgressLabel");
+    if (lbl) lbl.textContent = `Adım ${tourStepIndex + 1} / ${steps.length}`;
+    const title = $("tourTitle");
+    if (title) title.textContent = step.title;
+    const body = $("tourBody");
+    if (body) {
+      body.innerHTML = `
+        <p class="small muted">${escapeHtml(step.eyebrow || "")}</p>
+        <p>${escapeHtml(step.say || "")}</p>
+        ${step.previewTitle ? `<h5 style="margin:10px 0 6px;">${escapeHtml(step.previewTitle)}</h5>` : ""}
+        ${Array.isArray(step.previewItems) ? `<ul class="clean-list small">${step.previewItems.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : ""}
+      `;
+    }
+    const dots = $("tourDots");
+    if (dots) {
+      dots.innerHTML = steps.map((_, idx) => `<span class="tour-dot ${idx === tourStepIndex ? "active" : ""}"></span>`).join("");
+    }
+    const prev = $("tourPrevBtn");
+    const next = $("tourNextBtn");
+    if (prev) prev.disabled = tourStepIndex === 0;
+    if (next) next.textContent = tourStepIndex === steps.length - 1 ? "Başlayalım ✓" : "İleri →";
+  }
+
+  /* ---------- Toplu Yenileme & Olay Bağlama ---------- */
+  function refreshAllProgressUI() {
+    updateHeaderAndSidebarProgress();
+    renderLevelsTab();
+    renderCalendarTab();
+    renderLibraryGrid();
+    const modal = $("progressModal");
+    if (modal && !modal.hasAttribute("hidden")) {
+      renderProgressModal();
+    }
+  }
+
   function bindEvents() {
-    document.querySelectorAll(".nav-btn").forEach((btn) => {
-      btn.addEventListener("click", () => activateTab(btn.getAttribute("data-tab"), true));
-    });
+    if (!HAS_DOC) return;
 
-    const homeBaslangic = document.getElementById("openBaslangicFromHomeBtn");
-    const homeStory = document.getElementById("openStoryFromHomeBtn");
-    if (homeBaslangic) homeBaslangic.addEventListener("click", () => activateTab("baslangic", true));
-    if (homeStory) {
-      homeStory.addEventListener("click", () => {
-        activateTab("tarih", true);
-        switchHistoryView("story");
-      });
-    }
-
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.getElementById("sidebar");
-    const backdrop = document.getElementById("sidebarBackdrop");
-    if (menuToggle && sidebar && backdrop) {
-      menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-        backdrop.classList.toggle("open");
-      });
-      backdrop.addEventListener("click", closeMobileSidebar);
-    }
-
-    const printBtn = document.getElementById("printBtn");
-    if (printBtn) printBtn.addEventListener("click", () => window.print());
-
-    // Profile Controls
-    const profSel = document.getElementById("profileSelect");
-    const newProfBtn = document.getElementById("newProfileBtn");
-    const roleSel = document.getElementById("profileRoleSelect");
-    const lvlSel = document.getElementById("profileLevelSelect");
-
-    if (profSel) {
-      profSel.addEventListener("change", () => {
-        appState.activeProfile = profSel.value;
-        saveAppState();
-        renderProfileControls();
-        updateProgressUI();
-        rerenderTrackableViews();
-      });
-    }
-    if (newProfBtn) {
-      newProfBtn.addEventListener("click", () => {
-        const name = prompt("Yeni ekip üyesinin adı (örn. Elif, Mert):");
-        if (!name || !name.trim()) return;
-        const clean = name.trim();
-        if (!appState.profiles[clean]) {
-          appState.profiles[clean] = createEmptyProfile("ortak", "Başlangıç");
-        }
-        appState.activeProfile = clean;
-        saveAppState();
-        renderProfileControls();
-        updateProgressUI();
-        rerenderTrackableViews();
-      });
-    }
-    if (roleSel) {
-      roleSel.addEventListener("change", () => {
-        getActiveProfile().role = roleSel.value;
-        saveAppState();
-        rerenderTrackableViews();
-      });
-    }
-    if (lvlSel) {
-      lvlSel.addEventListener("change", () => {
-        getActiveProfile().level = lvlSel.value;
-        saveAppState();
-        rerenderTrackableViews();
-      });
-    }
-
-    // Delegated Card Clicks (3-state status, star, toggle-note, jump from story arc, copy stuck prompt)
+    // Navigasyon & Alt Sekmeler
     document.addEventListener("click", (e) => {
       const target = e.target;
-      if (!target) return;
+      if (!target || typeof target.closest !== "function") return;
 
-      const statusBtn = target.closest('[data-action="status"]');
-      if (statusBtn) {
-        const card = statusBtn.closest("[data-res-key]");
-        if (card) setItemStatus(card.getAttribute("data-res-key"), statusBtn.getAttribute("data-status"));
+      const navBtn = target.closest(".nav-btn[data-tab]");
+      if (navBtn) {
+        switchTab(navBtn.getAttribute("data-tab"));
         return;
       }
 
-      const starBtn = target.closest('[data-action="star"]');
-      if (starBtn) {
-        const card = starBtn.closest("[data-res-key]");
-        if (card) toggleItemStar(card.getAttribute("data-res-key"));
+      const subBtn = target.closest("[data-subtab-group][data-subtab]");
+      if (subBtn) {
+        switchSubtab(subBtn.getAttribute("data-subtab-group"), subBtn.getAttribute("data-subtab"));
         return;
       }
 
-      const noteBtn = target.closest('[data-action="toggle-note"]');
-      if (noteBtn) {
-        const card = noteBtn.closest("[data-res-key]");
-        const box = card ? card.querySelector(".personal-note-box") : null;
-        if (box) {
-          box.classList.toggle("open");
-          const ta = box.querySelector("textarea");
-          if (box.classList.contains("open") && ta) ta.focus();
-        }
+      const lvlPill = target.closest("[data-level-id]");
+      if (lvlPill) {
+        activeLevelId = lvlPill.getAttribute("data-level-id") || "all";
+        renderLevelsTab();
         return;
       }
 
-      const jumpChip = target.closest("[data-jump-tl]");
-      if (jumpChip) {
-        jumpToTimelineItem(jumpChip.getAttribute("data-jump-tl"));
+      const topicBtn = target.closest("[data-topic-id]");
+      if (topicBtn) {
+        const tid = topicBtn.getAttribute("data-topic-id");
+        const member = getActiveMember();
+        if (member.topics[tid]) delete member.topics[tid];
+        else member.topics[tid] = true;
+        saveState();
+        refreshAllProgressUI();
         return;
       }
 
-      const stuckBtn = target.closest(".copy-stuck-btn");
-      if (stuckBtn && DATA.BEGINNER_GUIDE) {
-        const idx = Number(stuckBtn.getAttribute("data-prompt-idx"));
-        const p = DATA.BEGINNER_GUIDE.stuckPrompts[idx];
-        if (p) copyTextWithFeedback(p.prompt, stuckBtn, "Kopyala");
+      const weekBtn = target.closest("[data-week-id]");
+      if (weekBtn) {
+        const wid = weekBtn.getAttribute("data-week-id");
+        const member = getActiveMember();
+        if (member.weeks[wid]) delete member.weeks[wid];
+        else member.weeks[wid] = true;
+        saveState();
+        refreshAllProgressUI();
+        return;
+      }
+
+      const calMonthCard = target.closest("[data-cal-month]");
+      if (calMonthCard) {
+        selectedCalMonth = Number(calMonthCard.getAttribute("data-cal-month")) || 1;
+        calViewMode = "monthly";
+        renderCalendarTab();
+        return;
+      }
+
+      const selectMonthBtn = target.closest("[data-select-month]");
+      if (selectMonthBtn) {
+        selectedCalMonth = Number(selectMonthBtn.getAttribute("data-select-month")) || 1;
+        renderCalendarTab();
+        return;
+      }
+
+      const jumpPaper = target.closest("[data-jump-paper]");
+      if (jumpPaper) {
+        const pid = jumpPaper.getAttribute("data-jump-paper");
+        histViewMode = "list";
+        renderHistoryTab();
+        const el = $(`timeline-${pid}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
+      const bookmarkBtn = target.closest("[data-bookmark-id]");
+      if (bookmarkBtn) {
+        const rid = bookmarkBtn.getAttribute("data-bookmark-id");
+        const member = getActiveMember();
+        if (member.bookmarks[rid]) delete member.bookmarks[rid];
+        else member.bookmarks[rid] = true;
+        saveState();
+        refreshAllProgressUI();
+        return;
+      }
+
+      const copyPrompt = target.closest("[data-copy-prompt]");
+      if (copyPrompt) {
+        copyText(copyPrompt.getAttribute("data-copy-prompt"), "İstem panoya kopyalandı.");
       }
     });
 
-    // Personal Note auto-save on input
-    document.addEventListener("input", (e) => {
-      const ta = e.target;
-      if (ta && ta.classList && ta.classList.contains("personal-note-input")) {
-        setItemNote(ta.getAttribute("data-note-key"), ta.value);
-      }
-    });
-
-    // Local Save / Export / Import / Reset
-    const linkBtn = document.getElementById("linkLocalFileBtn");
-    const openBtn = document.getElementById("openLocalFileBtn");
-    const obsBtn = document.getElementById("exportObsidianBtn");
-    const exportBtn = document.getElementById("exportProgressBtn");
-    const importInput = document.getElementById("importProgressInput");
-    const resetBtn = document.getElementById("resetProgressBtn");
-
-    if (linkBtn) linkBtn.addEventListener("click", linkLocalSaveFile);
-    if (openBtn) openBtn.addEventListener("click", openLocalSaveFile);
-    if (obsBtn) obsBtn.addEventListener("click", exportObsidianMarkdown);
-    if (exportBtn) exportBtn.addEventListener("click", downloadJsonBackup);
-
-    if (importInput) {
-      importInput.addEventListener("change", (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            applyImportedPayload(JSON.parse(String(reader.result)));
-            setLocalSaveStatus(false, `Dosyadan yüklendi: ${file.name}`);
-          } catch (err) {
-            alert("İçe aktarma başarısız: Geçerli bir ilerleme JSON dosyası seçin.");
-          }
-          importInput.value = "";
-        };
-        reader.readAsText(file);
+    // Mobil menü
+    const menuToggle = $("menuToggle");
+    const sidebar = $("sidebar");
+    const backdrop = $("sidebarBackdrop");
+    if (menuToggle && sidebar) {
+      menuToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        if (backdrop) backdrop.classList.toggle("open");
+      });
+    }
+    if (backdrop && sidebar) {
+      backdrop.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        backdrop.classList.remove("open");
       });
     }
 
-    if (resetBtn) {
-      resetBtn.addEventListener("click", () => {
-        if (confirm(`${appState.activeProfile} profilinin tüm ilerleme, favori ve not kayıtları sıfırlansın mı?`)) {
-          const prof = getActiveProfile();
-          prof.statuses = {};
-          prof.stars = {};
-          prof.notes = {};
-          saveAppState();
-          updateProgressUI();
-          rerenderTrackableViews();
-        }
+    // Tema
+    const themeToggle = $("themeToggle");
+    if (themeToggle) {
+      themeToggle.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || "light";
+        applyTheme(cur === "dark" ? "light" : "dark");
       });
     }
 
-    // Beginner tab listeners
-    const copyAdvBtn = document.getElementById("copyAdvisorEmailBtn");
-    if (copyAdvBtn && DATA.BEGINNER_GUIDE) {
-      copyAdvBtn.addEventListener("click", () => {
-        copyTextWithFeedback(DATA.BEGINNER_GUIDE.advisorEmailTemplate, copyAdvBtn, "E-Postayı Kopyala");
+    // Hero kısayolları
+    if ($("heroGoLevelsBtn")) $("heroGoLevelsBtn").addEventListener("click", () => switchTab("seviyeler"));
+    if ($("heroGoCalendarBtn")) $("heroGoCalendarBtn").addEventListener("click", () => switchTab("takvim"));
+    if ($("heroStartTourBtn")) $("heroStartTourBtn").addEventListener("click", () => openTour(0));
+    if ($("openTourBtn")) $("openTourBtn").addEventListener("click", () => openTour(0));
+    if ($("mascotOpenTourBtn")) $("mascotOpenTourBtn").addEventListener("click", () => openTour(0));
+    if ($("mascotDockBtn")) $("mascotDockBtn").addEventListener("click", () => openTour(0));
+
+    // Başlangıç kopyalama & sözlük
+    if ($("copyAdvisorEmailBtn")) {
+      $("copyAdvisorEmailBtn").addEventListener("click", () => {
+        const el = $("advisorEmailText");
+        if (el) copyText(el.textContent, "Danışman e-posta taslağı kopyalandı.");
       });
     }
-    const glSearch = document.getElementById("glossarySearch");
-    if (glSearch) glSearch.addEventListener("input", renderGlossary);
+    if ($("glossarySearch")) $("glossarySearch").addEventListener("input", renderGlossary);
 
-    // History view switch + Timeline filters
-    const viewStory = document.getElementById("viewStoryBtn");
-    const viewChrono = document.getElementById("viewChronoBtn");
-    if (viewStory) viewStory.addEventListener("click", () => switchHistoryView("story"));
-    if (viewChrono) viewChrono.addEventListener("click", () => switchHistoryView("chrono"));
+    // Seviye rol filtresi
+    if ($("levelRoleFilter")) $("levelRoleFilter").addEventListener("change", renderLevelsTab);
 
-    const tlSearch = document.getElementById("timelineSearch");
-    if (tlSearch) tlSearch.addEventListener("input", renderTimeline);
-    document.querySelectorAll("#timelineEraChips .chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        document.querySelectorAll("#timelineEraChips .chip").forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        activeTimelineEra = chip.getAttribute("data-era");
-        renderTimeline();
-      });
-    });
-
-    // Infra Modules
-    const infraWrap = document.getElementById("infraModulesContainer");
-    if (infraWrap) {
-      infraWrap.addEventListener("click", (e) => {
-        const header = e.target.closest(".module-header");
-        if (header) {
-          const card = header.closest(".module-card");
-          const open = card.classList.toggle("open");
-          header.setAttribute("aria-expanded", open ? "true" : "false");
-        }
+    // Takvim kontrolleri
+    if ($("calViewAnnualBtn")) {
+      $("calViewAnnualBtn").addEventListener("click", () => { calViewMode = "annual"; renderCalendarTab(); });
+    }
+    if ($("calViewMonthlyBtn")) {
+      $("calViewMonthlyBtn").addEventListener("click", () => { calViewMode = "monthly"; renderCalendarTab(); });
+    }
+    if ($("calStartMonthSelect")) {
+      $("calStartMonthSelect").addEventListener("change", (e) => {
+        appState.startMonth = e.target.value;
+        saveState();
+        renderCalendarTab();
       });
     }
-    document.querySelectorAll("#infraRoleChips .chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        document.querySelectorAll("#infraRoleChips .chip").forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        activeInfraRole = chip.getAttribute("data-role");
-        renderInfraModules();
-      });
-    });
-    const expAll = document.getElementById("infraExpandAllBtn");
-    const colAll = document.getElementById("infraCollapseAllBtn");
-    if (expAll) {
-      expAll.addEventListener("click", () => {
-        document.querySelectorAll(".module-card").forEach((c) => {
-          c.classList.add("open");
-          const h = c.querySelector(".module-header");
-          if (h) h.setAttribute("aria-expanded", "true");
-        });
+    if ($("calPrevMonthBtn")) {
+      $("calPrevMonthBtn").addEventListener("click", () => {
+        selectedCalMonth = selectedCalMonth <= 1 ? 12 : selectedCalMonth - 1;
+        renderCalendarTab();
       });
     }
-    if (colAll) {
-      colAll.addEventListener("click", () => {
-        document.querySelectorAll(".module-card").forEach((c) => {
-          c.classList.remove("open");
-          const h = c.querySelector(".module-header");
-          if (h) h.setAttribute("aria-expanded", "false");
-        });
+    if ($("calNextMonthBtn")) {
+      $("calNextMonthBtn").addEventListener("click", () => {
+        selectedCalMonth = selectedCalMonth >= 12 ? 1 : selectedCalMonth + 1;
+        renderCalendarTab();
       });
     }
 
-    // Calculators
-    ["vramParamsM", "vramMode", "vramBatch", "vramSeq", "vramHidden", "vramLayers", "vramGradCkpt", "vramUnsloth"].forEach((id) => {
-      const el = document.getElementById(id);
+    // Tarih filtreleri
+    if ($("histModeStoryBtn")) {
+      $("histModeStoryBtn").addEventListener("click", () => { histViewMode = "story"; renderHistoryTab(); });
+    }
+    if ($("histModeListBtn")) {
+      $("histModeListBtn").addEventListener("click", () => { histViewMode = "list"; renderHistoryTab(); });
+    }
+    ["timelineSearch", "timelineEraFilter", "timelineRoleFilter"].forEach((id) => {
+      const el = $(id);
       if (el) {
-        el.addEventListener("input", updateVramCalc);
-        el.addEventListener("change", updateVramCalc);
+        el.addEventListener("input", renderTimelineList);
+        el.addEventListener("change", renderTimelineList);
+      }
+    });
+
+    // Hesaplayıcılar & Sokratik İstem
+    if ($("vramPreset")) {
+      $("vramPreset").addEventListener("change", (e) => {
+        if (e.target.value !== "custom") applyVramPreset(e.target.value);
+      });
+    }
+    ["vramParamsM", "vramMode", "vramBatch", "vramSeq", "vramHidden", "vramLayers", "vramGradCkpt", "vramUnsloth"].forEach((id) => {
+      const el = $(id);
+      if (el) {
+        const onEdit = () => {
+          if ($("vramPreset")) $("vramPreset").value = "custom";
+          updateVramCalc();
+        };
+        el.addEventListener("input", onEdit);
+        el.addEventListener("change", onEdit);
       }
     });
     ["chParamsM", "chTokensB", "chHardware", "chMfu"].forEach((id) => {
-      const el = document.getElementById(id);
+      const el = $(id);
       if (el) {
         el.addEventListener("input", updateChinchillaCalc);
         el.addEventListener("change", updateChinchillaCalc);
       }
     });
-
-    // Audit filters
-    const audSearch = document.getElementById("auditSearch");
-    const audCat = document.getElementById("auditCategorySelect");
-    if (audSearch) audSearch.addEventListener("input", renderAuditTable);
-    if (audCat) audCat.addEventListener("change", renderAuditTable);
-
-    // Library filters & status chips
-    ["libSearch", "libCategorySelect", "libTypeSelect", "libLevelSelect", "libRoleSelect"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener("input", renderLibrary);
-        el.addEventListener("change", renderLibrary);
-      }
-    });
-    document.querySelectorAll("#libStatusChips .chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        document.querySelectorAll("#libStatusChips .chip").forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        activeLibStatus = chip.getAttribute("data-status");
-        renderLibrary();
-      });
-    });
-
-    // Mascot Tour & Floating Popover
-    const openTourBtn = document.getElementById("openTourBtn");
-    const tourCloseBtn = document.getElementById("tourCloseBtn");
-    const tourPrevBtn = document.getElementById("tourPrevBtn");
-    const tourNextBtn = document.getElementById("tourNextBtn");
-    const tourModal = document.getElementById("mascotTourModal");
-    const tourDots = document.getElementById("tourDots");
-
-    if (openTourBtn) openTourBtn.addEventListener("click", () => openTour(0));
-    if (tourCloseBtn) tourCloseBtn.addEventListener("click", closeTour);
-    if (tourPrevBtn) {
-      tourPrevBtn.addEventListener("click", () => {
-        if (tourStepIndex > 0) { tourStepIndex--; renderTourStep(); }
+    if ($("copyPromptBtn")) {
+      $("copyPromptBtn").addEventListener("click", () => {
+        const el = $("socraticPromptText");
+        if (el) copyText(el.textContent, "Sokratik istem kopyalandı.");
       });
     }
-    if (tourNextBtn) {
-      tourNextBtn.addEventListener("click", () => {
-        const len = (DATA.MASCOT_TOUR_STEPS || []).length;
-        if (tourStepIndex < len - 1) {
-          tourStepIndex++;
+
+    // Kütüphane & Denetim
+    ["libSearch", "libCategoryFilter", "libLevelFilter", "libRoleFilter"].forEach((id) => {
+      const el = $(id);
+      if (el) {
+        el.addEventListener("input", renderLibraryGrid);
+        el.addEventListener("change", renderLibraryGrid);
+      }
+    });
+    if ($("libBookmarkOnlyBtn")) {
+      $("libBookmarkOnlyBtn").addEventListener("click", () => {
+        libBookmarkOnly = !libBookmarkOnly;
+        $("libBookmarkOnlyBtn").classList.toggle("active", libBookmarkOnly);
+        renderLibraryGrid();
+      });
+    }
+    ["auditSearch", "auditTierFilter"].forEach((id) => {
+      const el = $(id);
+      if (el) {
+        el.addEventListener("input", renderAuditTable);
+        el.addEventListener("change", renderAuditTable);
+      }
+    });
+
+    // İlerleme & Yedek Modalı
+    if ($("openProgressBtn")) $("openProgressBtn").addEventListener("click", openProgressModal);
+    if ($("sidebarOpenProgressBtn")) $("sidebarOpenProgressBtn").addEventListener("click", openProgressModal);
+    if ($("closeProgressModalBtn")) $("closeProgressModalBtn").addEventListener("click", closeProgressModal);
+    if ($("progressModal")) {
+      $("progressModal").addEventListener("click", (e) => {
+        if (e.target === $("progressModal")) closeProgressModal();
+      });
+    }
+    if ($("modalMemberSelect")) {
+      $("modalMemberSelect").addEventListener("change", (e) => {
+        if (appState.members[e.target.value]) {
+          appState.activeMember = e.target.value;
+          saveState();
+          refreshAllProgressUI();
+        }
+      });
+    }
+    if ($("modalAddMemberBtn")) {
+      $("modalAddMemberBtn").addEventListener("click", () => {
+        const name = window.prompt("Yeni ekip üyesinin adı:");
+        const clean = name ? name.trim() : "";
+        if (!clean) return;
+        if (!appState.members[clean]) {
+          appState.members[clean] = createEmptyMember("ortak");
+        }
+        appState.activeMember = clean;
+        saveState();
+        refreshAllProgressUI();
+        showToast(`${clean} profili eklendi.`);
+      });
+    }
+    if ($("modalRoleSelect")) {
+      $("modalRoleSelect").addEventListener("change", (e) => {
+        const member = getActiveMember();
+        member.role = ROLE_LABELS[e.target.value] ? e.target.value : "ortak";
+        saveState();
+        refreshAllProgressUI();
+      });
+    }
+    if ($("copySyncCodeBtn")) {
+      $("copySyncCodeBtn").addEventListener("click", () => {
+        const code = encodeSyncCode();
+        copyText(code, "Sync kodu kopyalandı.");
+        if ($("syncFeedback")) $("syncFeedback").textContent = "Sync kodu panoya kopyalandı.";
+      });
+    }
+    if ($("copySyncLinkBtn")) {
+      $("copySyncLinkBtn").addEventListener("click", () => {
+        const code = encodeSyncCode();
+        const base = HAS_WINDOW && window.location ? `${window.location.origin}${window.location.pathname}` : "";
+        copyText(`${base}?sync=${encodeURIComponent(code)}`, "Sync bağlantısı kopyalandı.");
+        if ($("syncFeedback")) $("syncFeedback").textContent = "Sync bağlantısı panoya kopyalandı.";
+      });
+    }
+    if ($("applySyncCodeBtn")) {
+      $("applySyncCodeBtn").addEventListener("click", () => {
+        const input = $("syncCodeInput");
+        const feedback = $("syncFeedback");
+        const decoded = decodeSyncCode(input ? input.value : "");
+        if (!decoded) {
+          if (feedback) feedback.textContent = "Geçersiz Sync kodu. Kod LINTU3- ile başlamalıdır.";
+          return;
+        }
+        applyDecodedSync(decoded);
+        if (input) input.value = "";
+        if (feedback) feedback.textContent = `${decoded.memberName} ilerlemesi uygulandı.`;
+        refreshAllProgressUI();
+        showToast(`${decoded.memberName} ilerlemesi yüklendi.`);
+      });
+    }
+    if ($("exportObsidianBtn")) $("exportObsidianBtn").addEventListener("click", exportObsidianMarkdown);
+    if ($("exportJsonBtn")) {
+      $("exportJsonBtn").addEventListener("click", () => {
+        downloadFile("lintu-yol-haritasi-yedek.json", JSON.stringify(appState, null, 2), "application/json");
+        showToast("JSON yedeği indirildi.");
+      });
+    }
+    if ($("importJsonInput")) {
+      $("importJsonInput").addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result || "{}"));
+            appState = normalizeState(parsed.state || parsed);
+            saveState();
+            refreshAllProgressUI();
+            showToast("JSON yedeği içe aktarıldı.");
+          } catch (_) {
+            showToast("JSON dosyası okunamadı.");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+      });
+    }
+    if ($("resetProgressBtn")) {
+      $("resetProgressBtn").addEventListener("click", () => {
+        if (!window.confirm(`${appState.activeMember} için tüm ilerleme sıfırlansın mı?`)) return;
+        const member = getActiveMember();
+        member.topics = {};
+        member.weeks = {};
+        member.bookmarks = {};
+        saveState();
+        refreshAllProgressUI();
+        showToast("İlerleme sıfırlandı.");
+      });
+    }
+
+    // Tur kontrolleri
+    if ($("tourSkipBtn")) $("tourSkipBtn").addEventListener("click", closeTour);
+    if ($("tourPrevBtn")) {
+      $("tourPrevBtn").addEventListener("click", () => {
+        if (tourStepIndex > 0) { tourStepIndex -= 1; renderTourStep(); }
+      });
+    }
+    if ($("tourNextBtn")) {
+      $("tourNextBtn").addEventListener("click", () => {
+        const total = DATA && DATA.MASCOT_TOUR_STEPS ? DATA.MASCOT_TOUR_STEPS.length : 0;
+        if (tourStepIndex < total - 1) {
+          tourStepIndex += 1;
           renderTourStep();
         } else {
           closeTour();
         }
       });
     }
-    if (tourDots) {
-      tourDots.addEventListener("click", (e) => {
-        const dot = e.target.closest(".tour-dot");
-        if (dot) {
-          tourStepIndex = Number(dot.getAttribute("data-tour-idx")) || 0;
-          renderTourStep();
-        }
-      });
-    }
-    if (tourModal) {
-      tourModal.addEventListener("click", (e) => {
-        if (e.target === tourModal) closeTour();
-      });
-    }
-
-    document.addEventListener("keydown", (e) => {
-      if (!tourModal || !tourModal.classList.contains("open")) return;
-      if (e.key === "Escape") closeTour();
-      else if (e.key === "ArrowRight") {
-        const len = (DATA.MASCOT_TOUR_STEPS || []).length;
-        if (tourStepIndex < len - 1) { tourStepIndex++; renderTourStep(); }
-      } else if (e.key === "ArrowLeft") {
-        if (tourStepIndex > 0) { tourStepIndex--; renderTourStep(); }
-      }
-    });
-
-    const fab = document.getElementById("mascotFab");
-    const pop = document.getElementById("mascotPopover");
-    const popClose = document.getElementById("mascotPopoverClose");
-    const popTourBtn = document.getElementById("mascotPopoverTourBtn");
-    if (fab && pop) {
-      fab.addEventListener("click", () => pop.classList.toggle("open"));
-    }
-    if (popClose && pop) {
-      popClose.addEventListener("click", () => pop.classList.remove("open"));
-    }
-    if (popTourBtn) {
-      popTourBtn.addEventListener("click", () => openTour(0));
-    }
   }
 
-  function updateNavCounts() {
-    const tl = document.getElementById("navCountTimeline");
-    const inf = document.getElementById("navCountInfra");
-    const aud = document.getElementById("navCountAudit");
-    const lib = document.getElementById("navCountLibrary");
-    if (tl) tl.textContent = String(DATA.TIMELINE_ITEMS.length);
-    if (inf) inf.textContent = String(DATA.INFRA_MODULES.length);
-    if (aud) aud.textContent = String(DATA.CREDENTIAL_AUDIT.length);
-    if (lib) lib.textContent = String(DATA.ALL_RESOURCES.length);
-  }
-
-  // Test ve dışa aktarım yardımcıları için salt-okunur kanca
-  window.__LINTU_ROADMAP__ = {
-    buildObsidianMarkdown,
-    getState: () => appState
-  };
-
-  document.addEventListener("DOMContentLoaded", () => {
+  /* ---------- Başlatma & Test Kancası ---------- */
+  function boot() {
     initTheme();
-    renderProfileControls();
-    updateNavCounts();
-    renderBeginnerGuide();
-    renderOverview();
-    renderStoryArcs();
-    renderTimeline();
-    renderInfraModules();
-    updateVramCalc();
-    updateChinchillaCalc();
-    renderFreeCompute();
-    renderAiTutor();
-    renderTeamPlan();
-    initAuditFilters();
-    renderAuditTable();
-    initLibraryFilters();
-    renderLibrary();
-    updateProgressUI();
-    updateMascotTip(currentTabId);
+    checkUrlSyncParam();
+    hydrateFromIndexedDbIfNeeded();
+
+    if (!DATA) {
+      console.error("ROADMAP_DATA yüklenemedi.");
+      return;
+    }
+
+    renderBeginnerSection();
+    renderLevelsTab();
+    renderCalendarTab();
+    renderHistoryTab();
+    renderToolsTab();
+    renderLibraryTab();
+    updateHeaderAndSidebarProgress();
+    switchTab("baslangic");
     bindEvents();
 
-    const hash = (window.location.hash || "").replace(/^#/, "");
-    if (hash && TAB_TITLES[hash]) {
-      activateTab(hash, false);
+    if (typeof localStorage !== "undefined") {
+      try {
+        if (!localStorage.getItem(STORAGE_KEY_TOUR)) {
+          openTour(0);
+        }
+      } catch (_) {}
     }
+  }
 
-    try {
-      if (!localStorage.getItem(STORAGE_KEY_TOUR)) {
-        openTour(0);
-      }
-    } catch (e) {}
-  });
+  if (HAS_WINDOW) {
+    window.__LINTU_V3__ = {
+      encodeSyncCode,
+      decodeSyncCode,
+      getState,
+      updateVramCalc,
+      updateChinchillaCalc
+    };
+  }
+
+  if (HAS_DOC) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", boot);
+    } else {
+      boot();
+    }
+  }
 })();
