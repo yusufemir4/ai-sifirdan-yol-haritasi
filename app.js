@@ -66,6 +66,9 @@
   let activeLevelId = "all";
   let calViewMode = "annual";
   let selectedCalMonth = 1;
+  let personalViewYear = new Date().getFullYear();
+  let personalViewMonth = new Date().getMonth();
+  let selectedPersonalDate = toLocalDateKey(new Date());
   let histViewMode = "story";
   let libBookmarkOnly = false;
   let tourStepIndex = 0;
@@ -112,7 +115,8 @@
       role: ROLE_LABELS[role] ? role : "ortak",
       topics: {},
       weeks: {},
-      bookmarks: {}
+      bookmarks: {},
+      activityLog: {}
     };
   }
 
@@ -121,6 +125,23 @@
     if (!obj || typeof obj !== "object") return out;
     Object.keys(obj).forEach((k) => {
       if (obj[k]) out[k] = true;
+    });
+    return out;
+  }
+
+  function cleanActivityLog(rawLog) {
+    const out = {};
+    if (!rawLog || typeof rawLog !== "object") return out;
+    Object.entries(rawLog).forEach(([dateKey, entry]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !entry || typeof entry !== "object") return;
+      const items = Array.isArray(entry.items)
+        ? Array.from(new Set(entry.items.map((x) => String(x || "").trim()).filter(Boolean)))
+        : [];
+      const checkIns = Math.max(0, Math.floor(Number(entry.checkIns) || 0));
+      const note = typeof entry.note === "string" ? entry.note.trim().slice(0, 240) : "";
+      if (items.length > 0 || checkIns > 0 || note) {
+        out[dateKey] = { items, checkIns, note };
+      }
     });
     return out;
   }
@@ -147,7 +168,8 @@
           role: m && ROLE_LABELS[m.role] ? m.role : "ortak",
           topics: cleanBoolMap(m && m.topics),
           weeks: cleanBoolMap(m && m.weeks),
-          bookmarks: cleanBoolMap(m && m.bookmarks)
+          bookmarks: cleanBoolMap(m && m.bookmarks),
+          activityLog: cleanActivityLog(m && m.activityLog)
         };
       });
       if (Object.keys(nextMembers).length > 0) {
@@ -276,7 +298,7 @@
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, "0");
       const mm = String(now.getMinutes()).padStart(2, "0");
-      hint.textContent = `Otomatik kaydedildi · ${hh}:${mm}`;
+      hint.textContent = `Bu tarayıcıya kaydedildi · ${hh}:${mm}`;
     }
   }
 
@@ -347,6 +369,12 @@
       ? memberNameOverride
       : appState.activeMember;
     const member = appState.members[name] || createEmptyMember("ortak");
+    const compactDays = Object.entries(member.activityLog || {})
+      .map(([dk, entry]) => [dk, getActivityCount(entry)])
+      .filter(([, cnt]) => cnt > 0)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-90)
+      .map(([dk, cnt]) => `${dk.replace(/-/g, "").slice(2)}:${cnt}`);
     const payload = {
       v: 3,
       n: name,
@@ -356,6 +384,7 @@
       w: packBitmaskHex(getWeekIds(), member.weeks),
       b: Object.keys(member.bookmarks || {}).filter((k) => member.bookmarks[k])
     };
+    if (compactDays.length > 0) payload.a = compactDays;
     return "LINTU3-" + utf8ToBase64Url(JSON.stringify(payload));
   }
 
@@ -372,6 +401,16 @@
           if (id) bookmarks[String(id)] = true;
         });
       }
+      const activityLog = {};
+      if (Array.isArray(parsed.a)) {
+        parsed.a.forEach((token) => {
+          const m = /^(\d{2})(\d{2})(\d{2}):(\d+)$/.exec(String(token || ""));
+          if (!m) return;
+          const dk = `20${m[1]}-${m[2]}-${m[3]}`;
+          const cnt = Math.max(0, Number(m[4]) || 0);
+          if (cnt > 0) activityLog[dk] = { items: [], checkIns: cnt, note: "" };
+        });
+      }
       return {
         memberName: parsed.n.trim() || "Üye",
         role: ROLE_LABELS[parsed.r] ? parsed.r : "ortak",
@@ -380,7 +419,8 @@
           : "2026-11",
         topics: unpackBitmaskHex(parsed.t, getTopicIds()),
         weeks: unpackBitmaskHex(parsed.w, getWeekIds()),
-        bookmarks
+        bookmarks,
+        activityLog
       };
     } catch (_) {
       return null;
@@ -393,7 +433,8 @@
       role: decoded.role,
       topics: decoded.topics,
       weeks: decoded.weeks,
-      bookmarks: decoded.bookmarks
+      bookmarks: decoded.bookmarks,
+      activityLog: cleanActivityLog(decoded.activityLog)
     };
     appState.activeMember = decoded.memberName;
     appState.startMonth = decoded.startMonth;
@@ -418,6 +459,169 @@
         window.history.replaceState(null, "", cleanUrl);
       }
     } catch (_) {}
+  }
+
+  /* ---------- Günlük Çalışma Kaydı & Seri Hesaplayıcı ---------- */
+  const TR_DAYS_FULL = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+
+  function toLocalDateKey(dateObj) {
+    const d = dateObj instanceof Date ? dateObj : new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function parseDateKey(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ""));
+    if (!m) return new Date();
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+
+  function formatFullTurkishDate(dateKey) {
+    const d = parseDateKey(dateKey);
+    return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}, ${TR_DAYS_FULL[d.getDay()]}`;
+  }
+
+  function getActivityCount(entry) {
+    if (!entry || typeof entry !== "object") return 0;
+    const itemCount = Array.isArray(entry.items) ? entry.items.length : 0;
+    const checkCount = Math.max(0, Math.floor(Number(entry.checkIns) || 0));
+    return itemCount + checkCount;
+  }
+
+  function getActivityLevel(count) {
+    if (count <= 0) return 0;
+    if (count === 1) return 1;
+    if (count === 2) return 2;
+    if (count <= 4) return 3;
+    return 4;
+  }
+
+  function ensureDayEntry(member, dateKey) {
+    if (!member.activityLog || typeof member.activityLog !== "object") {
+      member.activityLog = {};
+    }
+    if (!member.activityLog[dateKey]) {
+      member.activityLog[dateKey] = { items: [], checkIns: 0, note: "" };
+    }
+    return member.activityLog[dateKey];
+  }
+
+  function pruneDayEntry(member, dateKey) {
+    if (!member.activityLog || !member.activityLog[dateKey]) return;
+    const e = member.activityLog[dateKey];
+    if ((!e.items || e.items.length === 0) && (!e.checkIns || e.checkIns <= 0) && !e.note) {
+      delete member.activityLog[dateKey];
+    }
+  }
+
+  function logItemCompletion(member, itemId, completed, dateOverride) {
+    if (!member || !itemId) return;
+    if (!member.activityLog || typeof member.activityLog !== "object") {
+      member.activityLog = {};
+    }
+    const targetKey = dateOverride || toLocalDateKey(new Date());
+    if (completed) {
+      const entry = ensureDayEntry(member, targetKey);
+      if (!entry.items.includes(itemId)) {
+        entry.items.push(itemId);
+      }
+    } else {
+      Object.keys(member.activityLog).forEach((dk) => {
+        const entry = member.activityLog[dk];
+        if (entry && Array.isArray(entry.items) && entry.items.includes(itemId)) {
+          entry.items = entry.items.filter((x) => x !== itemId);
+          pruneDayEntry(member, dk);
+        }
+      });
+    }
+  }
+
+  function addManualStudyCheckIn(member, dateKey) {
+    if (!member) return;
+    const dk = dateKey || toLocalDateKey(new Date());
+    const entry = ensureDayEntry(member, dk);
+    entry.checkIns = (Number(entry.checkIns) || 0) + 1;
+  }
+
+  function clearDayActivity(member, dateKey) {
+    if (!member || !member.activityLog || !dateKey) return;
+    const entry = member.activityLog[dateKey];
+    if (!entry) return;
+    entry.checkIns = 0;
+    entry.note = "";
+    pruneDayEntry(member, dateKey);
+  }
+
+  function setDayNote(member, dateKey, noteText) {
+    if (!member || !dateKey) return;
+    const clean = String(noteText || "").trim().slice(0, 240);
+    if (!clean && (!member.activityLog || !member.activityLog[dateKey])) return;
+    const entry = ensureDayEntry(member, dateKey);
+    entry.note = clean;
+    pruneDayEntry(member, dateKey);
+  }
+
+  function resolveActivityLabel(itemId) {
+    if (DATA && Array.isArray(DATA.LEVEL_GROUPS)) {
+      for (const lvl of DATA.LEVEL_GROUPS) {
+        const t = (lvl.topics || []).find((x) => x.id === itemId);
+        if (t) return `${lvl.badge} · ${t.title}`;
+      }
+    }
+    if (DATA && Array.isArray(DATA.ANNUAL_CALENDAR)) {
+      for (const mo of DATA.ANNUAL_CALENDAR) {
+        const w = (mo.weeks || []).find((x) => x.id === itemId);
+        if (w) return `Ay ${mo.month} · Hafta ${w.week}: ${w.title}`;
+      }
+    }
+    return itemId;
+  }
+
+  function computeStreakStats(activityLog, nowDate) {
+    const log = activityLog && typeof activityLog === "object" ? activityLog : {};
+    const activeKeys = Object.keys(log)
+      .filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && getActivityCount(log[k]) > 0)
+      .sort();
+    const activeSet = new Set(activeKeys);
+
+    const today = nowDate instanceof Date ? new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate()) : new Date();
+    const cleanToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayPrefix = `${cleanToday.getFullYear()}-${String(cleanToday.getMonth() + 1).padStart(2, "0")}`;
+    const thisMonthDays = activeKeys.filter((k) => k.startsWith(todayPrefix)).length;
+
+    let currentStreak = 0;
+    const cursor = new Date(cleanToday);
+    if (!activeSet.has(toLocalDateKey(cursor))) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    while (activeSet.has(toLocalDateKey(cursor))) {
+      currentStreak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    let longestStreak = 0;
+    let run = 0;
+    let prevDate = null;
+    activeKeys.forEach((dk) => {
+      const cur = parseDateKey(dk);
+      if (prevDate) {
+        const diffDays = Math.round((cur - prevDate) / 86400000);
+        run = diffDays === 1 ? run + 1 : 1;
+      } else {
+        run = 1;
+      }
+      if (run > longestStreak) longestStreak = run;
+      prevDate = cur;
+    });
+
+    return {
+      totalDays: activeKeys.length,
+      thisMonthDays,
+      currentStreak,
+      longestStreak
+    };
   }
 
   /* ---------- Takvim Ay Etiketi ---------- */
@@ -792,7 +996,7 @@
     }).join("");
   }
 
-  /* ---------- 2. 12 Aylık Yıllık & Aylık Takvim ---------- */
+  /* ---------- 2. 12 Aylık Yıllık, Aylık & Kişisel İlerleyiş Takvimi ---------- */
   function renderCalendarTab() {
     if (!DATA || !Array.isArray(DATA.ANNUAL_CALENDAR)) return;
     const member = getActiveMember();
@@ -803,19 +1007,27 @@
 
     const annualView = $("calAnnualView");
     const monthlyView = $("calMonthlyView");
+    const personalView = $("calPersonalView");
     const annualBtn = $("calViewAnnualBtn");
     const monthlyBtn = $("calViewMonthlyBtn");
-    if (annualView && monthlyView) {
-      if (calViewMode === "annual") {
-        annualView.removeAttribute("hidden");
-        monthlyView.setAttribute("hidden", "");
-      } else {
-        annualView.setAttribute("hidden", "");
-        monthlyView.removeAttribute("hidden");
-      }
+    const personalBtn = $("calViewPersonalBtn");
+
+    if (annualView) {
+      if (calViewMode === "annual") annualView.removeAttribute("hidden");
+      else annualView.setAttribute("hidden", "");
     }
+    if (monthlyView) {
+      if (calViewMode === "monthly") monthlyView.removeAttribute("hidden");
+      else monthlyView.setAttribute("hidden", "");
+    }
+    if (personalView) {
+      if (calViewMode === "personal") personalView.removeAttribute("hidden");
+      else personalView.setAttribute("hidden", "");
+    }
+
     if (annualBtn) annualBtn.classList.toggle("active", calViewMode === "annual");
     if (monthlyBtn) monthlyBtn.classList.toggle("active", calViewMode === "monthly");
+    if (personalBtn) personalBtn.classList.toggle("active", calViewMode === "personal");
 
     const mStats = getProgressMetrics();
     const summaryEl = $("calProgressSummary");
@@ -825,6 +1037,7 @@
 
     renderAnnualCalendarGrid(member);
     renderMonthlyCalendarDetail(member);
+    renderPersonalCalendar(member);
   }
 
   function renderAnnualCalendarGrid(member) {
@@ -940,6 +1153,154 @@
         </div>
       </div>
     `;
+  }
+
+  function renderPersonalCalendar(member) {
+    const todayKey = toLocalDateKey(new Date());
+    const stats = computeStreakStats(member.activityLog);
+
+    const statsEl = $("personalCalStats");
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="stat-pill"><span>Aktif Seri</span><strong>${stats.currentStreak} gün</strong></div>
+        <div class="stat-pill"><span>En Uzun Seri</span><strong>${stats.longestStreak} gün</strong></div>
+        <div class="stat-pill"><span>Toplam Aktif</span><strong>${stats.totalDays} gün</strong></div>
+        <div class="stat-pill"><span>Bu Ay</span><strong>${stats.thisMonthDays} gün</strong></div>
+      `;
+    }
+
+    renderPersonalMonthGrid(member, todayKey);
+    renderPersonalDayDetail(member, todayKey);
+    renderHeatmapGrid($("personalHeatmap"), member.activityLog || {}, 52, false, selectedPersonalDate);
+  }
+
+  function renderPersonalMonthGrid(member, todayKey) {
+    const titleEl = $("personalMonthTitle");
+    if (titleEl) {
+      titleEl.textContent = `${TR_MONTHS[personalViewMonth]} ${personalViewYear}`;
+    }
+    const grid = $("personalMonthGrid");
+    if (!grid) return;
+
+    const firstDay = new Date(personalViewYear, personalViewMonth, 1);
+    const offset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(personalViewYear, personalViewMonth + 1, 0).getDate();
+    const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+    const log = member.activityLog || {};
+
+    const cells = [];
+    for (let i = 0; i < totalCells; i++) {
+      const cellDate = new Date(personalViewYear, personalViewMonth, 1 - offset + i);
+      const dk = toLocalDateKey(cellDate);
+      const inMonth = cellDate.getMonth() === personalViewMonth;
+      const cnt = getActivityCount(log[dk]);
+      const lvl = getActivityLevel(cnt);
+      const classes = [
+        "cal-day-cell",
+        `lvl-${lvl}`,
+        inMonth ? "" : "other-month",
+        dk === todayKey ? "today" : "",
+        dk === selectedPersonalDate ? "selected" : ""
+      ].filter(Boolean).join(" ");
+
+      cells.push(`
+        <button type="button" class="${classes}" data-personal-day="${dk}" aria-label="${escapeHtml(formatFullTurkishDate(dk))}: ${cnt} etkinlik">
+          <span class="cal-day-num">${cellDate.getDate()}</span>
+          ${cnt > 0 ? `<span class="cal-day-count">${cnt}</span>` : ""}
+        </button>
+      `);
+    }
+    grid.innerHTML = cells.join("");
+  }
+
+  function renderPersonalDayDetail(member, todayKey) {
+    const detailEl = $("personalDayDetail");
+    if (!detailEl) return;
+    const dk = selectedPersonalDate || todayKey;
+    const entry = (member.activityLog && member.activityLog[dk]) || { items: [], checkIns: 0, note: "" };
+    const cnt = getActivityCount(entry);
+    const items = Array.isArray(entry.items) ? entry.items : [];
+
+    detailEl.innerHTML = `
+      <div class="card-head">
+        <div>
+          <span class="badge ${dk === todayKey ? "badge-brand" : ""}">${dk === todayKey ? "Bugün" : "Seçili Gün"}</span>
+          <h4 class="card-title" style="margin:6px 0 2px;">${escapeHtml(formatFullTurkishDate(dk))}</h4>
+          <p class="small muted">${cnt > 0 ? `Toplam ${cnt} çalışma etkinliği kayıtlı.` : "Bu gün için henüz çalışma kaydı yok."}</p>
+        </div>
+      </div>
+
+      <div class="inline-row" style="margin:10px 0 12px;">
+        <button type="button" class="btn btn-primary btn-xs" data-day-action="add" data-day-key="${escapeHtml(dk)}">+1 Çalışma Ekle</button>
+        <button type="button" class="btn btn-xs" data-day-action="clear" data-day-key="${escapeHtml(dk)}">Manuel Kaydı Temizle</button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div class="small"><strong>Tamamlanan Konu &amp; Haftalar:</strong></div>
+        ${items.length > 0
+          ? `<ul class="clean-list small" style="margin-top:4px;">${items.map((id) => `<li>${escapeHtml(resolveActivityLabel(id))}</li>`).join("")}</ul>`
+          : `<p class="small muted" style="margin:4px 0 0;">Konu veya hafta işaretlediğinde otomatik buraya eklenir.</p>`}
+        ${entry.checkIns > 0
+          ? `<p class="small" style="margin:6px 0 0;"><strong>Manuel Çalışma Sayısı:</strong> ${entry.checkIns} oturum</p>`
+          : ""}
+      </div>
+
+      <div>
+        <div class="small"><strong>Günlük Kısa Not:</strong></div>
+        <div class="inline-row mt-sm">
+          <input data-day-note-input class="input full-width" type="text" maxlength="240" value="${escapeHtml(entry.note || "")}" placeholder="Bugün neye odaklandın? (isteğe bağlı)" aria-label="Günlük kısa not" />
+          <button class="btn btn-xs" type="button" data-save-day-note="${escapeHtml(dk)}">Notu Kaydet</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHeatmapGrid(containerEl, activityLog, weeksCount, miniMode, selectedDate) {
+    if (!containerEl) return;
+    const now = new Date();
+    const cleanToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayWeekday = (cleanToday.getDay() + 6) % 7;
+    const curMonday = new Date(cleanToday);
+    curMonday.setDate(curMonday.getDate() - todayWeekday);
+
+    const startDate = new Date(curMonday);
+    startDate.setDate(startDate.getDate() - (weeksCount - 1) * 7);
+    const totalDays = (weeksCount - 1) * 7 + todayWeekday + 1;
+
+    const monthLabels = [];
+    let lastLabelMonth = -1;
+    for (let w = 0; w < weeksCount; w++) {
+      const colDate = new Date(startDate);
+      colDate.setDate(startDate.getDate() + w * 7);
+      const m = colDate.getMonth();
+      if (m !== lastLabelMonth && w % 4 === 0) {
+        monthLabels.push(TR_MONTHS[m].slice(0, 3));
+        lastLabelMonth = m;
+      }
+    }
+
+    const cells = [];
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const dk = toLocalDateKey(d);
+      const cnt = getActivityCount(activityLog[dk]);
+      const lvl = getActivityLevel(cnt);
+      const isSelected = selectedDate && dk === selectedDate;
+      cells.push(`<button type="button" class="heatmap-cell lvl-${lvl}${isSelected ? " selected" : ""}" data-personal-day="${dk}" title="${escapeHtml(formatFullTurkishDate(dk))}: ${cnt} etkinlik"></button>`);
+    }
+
+    const monthsBar = !miniMode
+      ? `<div class="heatmap-months-row">${monthLabels.map((lbl) => `<span>${escapeHtml(lbl)}</span>`).join("")}</div>`
+      : "";
+
+    containerEl.innerHTML = `${monthsBar}<div class="heatmap-grid${miniMode ? " mini" : ""}">${cells.join("")}</div>`;
+  }
+
+  function renderModalMiniHeatmap(member) {
+    const wrap = $("modalMiniHeatmap");
+    if (!wrap) return;
+    renderHeatmapGrid(wrap, (member && member.activityLog) || {}, 12, true, null);
   }
 
   /* ---------- 3. Tarih & Olay Örgüsü ---------- */
@@ -1471,6 +1832,8 @@
       if ("value" in syncOut) syncOut.value = code;
       else syncOut.textContent = code;
     }
+
+    renderModalMiniHeatmap(member);
   }
 
   function downloadFile(filename, content, mime) {
@@ -1489,12 +1852,14 @@
   function exportObsidianMarkdown() {
     const member = getActiveMember();
     const m = getProgressMetrics();
+    const streaks = computeStreakStats(member.activityLog);
     const resMap = getResourceMap();
     const lines = [
       `# Lintu AI Yol Haritası — ${appState.activeMember}`,
       `- **Rol:** ${ROLE_LABELS[member.role] || member.role}`,
       `- **Başlangıç:** ${formatCalendarMonthLabel(1, appState.startMonth)}`,
       `- **Genel İlerleme:** %${m.pct} (${m.doneTopics}/${m.totalTopics} konu, ${m.doneWeeks}/${m.totalWeeks} hafta)`,
+      `- **Çalışma Serisi:** Aktif ${streaks.currentStreak} gün · En uzun ${streaks.longestStreak} gün · Toplam ${streaks.totalDays} aktif gün`,
       "",
       "## Tamamlanan Konular"
     ];
@@ -1604,8 +1969,10 @@
       if (topicBtn) {
         const tid = topicBtn.getAttribute("data-topic-id");
         const member = getActiveMember();
-        if (member.topics[tid]) delete member.topics[tid];
-        else member.topics[tid] = true;
+        const isNowDone = !member.topics[tid];
+        if (isNowDone) member.topics[tid] = true;
+        else delete member.topics[tid];
+        logItemCompletion(member, tid, isNowDone);
         saveState();
         refreshAllProgressUI();
         return;
@@ -1615,10 +1982,54 @@
       if (weekBtn) {
         const wid = weekBtn.getAttribute("data-week-id");
         const member = getActiveMember();
-        if (member.weeks[wid]) delete member.weeks[wid];
-        else member.weeks[wid] = true;
+        const isNowDone = !member.weeks[wid];
+        if (isNowDone) member.weeks[wid] = true;
+        else delete member.weeks[wid];
+        logItemCompletion(member, wid, isNowDone);
         saveState();
         refreshAllProgressUI();
+        return;
+      }
+
+      const personalDayBtn = target.closest("[data-personal-day]");
+      if (personalDayBtn) {
+        const dk = personalDayBtn.getAttribute("data-personal-day");
+        if (dk) {
+          selectedPersonalDate = dk;
+          const d = parseDateKey(dk);
+          personalViewYear = d.getFullYear();
+          personalViewMonth = d.getMonth();
+          calViewMode = "personal";
+          renderCalendarTab();
+        }
+        return;
+      }
+
+      const dayActionBtn = target.closest("[data-day-action]");
+      if (dayActionBtn) {
+        const action = dayActionBtn.getAttribute("data-day-action");
+        const dk = dayActionBtn.getAttribute("data-day-key") || selectedPersonalDate;
+        const member = getActiveMember();
+        if (action === "add") {
+          addManualStudyCheckIn(member, dk);
+          showToast(`${formatFullTurkishDate(dk)} için +1 çalışma eklendi.`);
+        } else if (action === "clear") {
+          clearDayActivity(member, dk);
+          showToast("Manuel çalışma kaydı temizlendi.");
+        }
+        saveState();
+        refreshAllProgressUI();
+        return;
+      }
+
+      const saveNoteBtn = target.closest("[data-save-day-note]");
+      if (saveNoteBtn) {
+        const dk = saveNoteBtn.getAttribute("data-save-day-note") || selectedPersonalDate;
+        const input = HAS_DOC ? document.querySelector("[data-day-note-input]") : null;
+        setDayNote(getActiveMember(), dk, input ? input.value : "");
+        saveState();
+        refreshAllProgressUI();
+        showToast("Günlük not kaydedildi.");
         return;
       }
 
@@ -1717,6 +2128,51 @@
     if ($("calViewMonthlyBtn")) {
       $("calViewMonthlyBtn").addEventListener("click", () => { calViewMode = "monthly"; renderCalendarTab(); });
     }
+    if ($("calViewPersonalBtn")) {
+      $("calViewPersonalBtn").addEventListener("click", () => { calViewMode = "personal"; renderCalendarTab(); });
+    }
+    if ($("logTodayBtn")) {
+      $("logTodayBtn").addEventListener("click", () => {
+        const todayKey = toLocalDateKey(new Date());
+        const now = new Date();
+        selectedPersonalDate = todayKey;
+        personalViewYear = now.getFullYear();
+        personalViewMonth = now.getMonth();
+        addManualStudyCheckIn(getActiveMember(), todayKey);
+        saveState();
+        refreshAllProgressUI();
+        showToast("Bugünkü çalışman takvime işlendi!");
+      });
+    }
+    if ($("personalPrevMonthBtn")) {
+      $("personalPrevMonthBtn").addEventListener("click", () => {
+        personalViewMonth -= 1;
+        if (personalViewMonth < 0) {
+          personalViewMonth = 11;
+          personalViewYear -= 1;
+        }
+        renderPersonalCalendar(getActiveMember());
+      });
+    }
+    if ($("personalNextMonthBtn")) {
+      $("personalNextMonthBtn").addEventListener("click", () => {
+        personalViewMonth += 1;
+        if (personalViewMonth > 11) {
+          personalViewMonth = 0;
+          personalViewYear += 1;
+        }
+        renderPersonalCalendar(getActiveMember());
+      });
+    }
+    if ($("personalTodayBtn")) {
+      $("personalTodayBtn").addEventListener("click", () => {
+        const now = new Date();
+        personalViewYear = now.getFullYear();
+        personalViewMonth = now.getMonth();
+        selectedPersonalDate = toLocalDateKey(now);
+        renderPersonalCalendar(getActiveMember());
+      });
+    }
     if ($("calStartMonthSelect")) {
       $("calStartMonthSelect").addEventListener("change", (e) => {
         appState.startMonth = e.target.value;
@@ -1809,6 +2265,14 @@
     // İlerleme & Yedek Modalı
     if ($("openProgressBtn")) $("openProgressBtn").addEventListener("click", openProgressModal);
     if ($("sidebarOpenProgressBtn")) $("sidebarOpenProgressBtn").addEventListener("click", openProgressModal);
+    if ($("modalOpenPersonalCalBtn")) {
+      $("modalOpenPersonalCalBtn").addEventListener("click", () => {
+        closeProgressModal();
+        calViewMode = "personal";
+        switchTab("takvim");
+        renderCalendarTab();
+      });
+    }
     if ($("closeProgressModalBtn")) $("closeProgressModalBtn").addEventListener("click", closeProgressModal);
     if ($("progressModal")) {
       $("progressModal").addEventListener("click", (e) => {
@@ -1911,6 +2375,7 @@
         member.topics = {};
         member.weeks = {};
         member.bookmarks = {};
+        member.activityLog = {};
         saveState();
         refreshAllProgressUI();
         showToast("İlerleme sıfırlandı.");
@@ -1973,7 +2438,11 @@
       decodeSyncCode,
       getState,
       updateVramCalc,
-      updateChinchillaCalc
+      updateChinchillaCalc,
+      computeStreakStats,
+      toLocalDateKey,
+      logItemCompletion,
+      addManualStudyCheckIn
     };
   }
 

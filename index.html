@@ -79,7 +79,7 @@
           <div class="progress-track" aria-hidden="true">
             <div id="sidebarProgressBar" class="progress-fill-done"></div>
           </div>
-          <p id="sidebarSaveHint" class="sidebar-save-hint">Tarayıcı belleğinde otomatik kaydedilir.</p>
+          <p id="sidebarSaveHint" class="sidebar-save-hint">Bu tarayıcıya yerel oto-kaydedilir (sunucusuz).</p>
           <button id="sidebarOpenProgressBtn" class="btn btn-primary btn-sm btn-block" type="button">
             İlerleme &amp; Yedek
           </button>
@@ -222,6 +222,7 @@
             <div class="view-switch" role="tablist" aria-label="Takvim görünümü">
               <button id="calViewAnnualBtn" class="view-btn active" type="button">Yıllık Kuşbakışı</button>
               <button id="calViewMonthlyBtn" class="view-btn" type="button">Aylık &amp; Haftalık</button>
+              <button id="calViewPersonalBtn" class="view-btn" type="button">Kendi İlerleyişim (Günlük)</button>
             </div>
             <div class="toolbar-group">
               <label class="filter-label" for="calStartMonthSelect">Başlangıç:</label>
@@ -249,6 +250,53 @@
               <button id="calNextMonthBtn" class="btn btn-xs" type="button">Sonraki Ay →</button>
             </div>
             <div id="calMonthDetail"></div>
+          </div>
+
+          <div id="calPersonalView" hidden>
+            <div class="personal-cal-head">
+              <div id="personalCalStats" class="personal-stats-grid"></div>
+              <button id="logTodayBtn" class="btn btn-primary btn-sm" type="button">✓ Bugün Çalıştım (+1)</button>
+            </div>
+
+            <div class="personal-cal-layout">
+              <div class="card personal-month-card">
+                <div class="personal-month-header">
+                  <div class="inline-row">
+                    <button id="personalPrevMonthBtn" class="btn btn-xs" type="button" aria-label="Önceki ay">←</button>
+                    <h3 id="personalMonthTitle" class="personal-month-title">Kasım 2026</h3>
+                    <button id="personalNextMonthBtn" class="btn btn-xs" type="button" aria-label="Sonraki ay">→</button>
+                  </div>
+                  <button id="personalTodayBtn" class="btn btn-xs" type="button">Bugün</button>
+                </div>
+                <div class="cal-weekdays" aria-hidden="true">
+                  <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span>
+                </div>
+                <div id="personalMonthGrid" class="personal-month-grid"></div>
+              </div>
+
+              <div class="card personal-day-detail">
+                <div id="personalDayDetail"></div>
+              </div>
+            </div>
+
+            <div class="card heatmap-card">
+              <div class="heatmap-head">
+                <div>
+                  <h4 style="margin:0;">Son 52 Hafta Çalışma Yoğunluğun</h4>
+                  <p class="small muted" style="margin:2px 0 0;">Konu/hafta işaretlediğinde veya "Bugün Çalıştım" dediğinde her gün otomatik işlenir.</p>
+                </div>
+                <div class="heatmap-legend" aria-hidden="true">
+                  <span class="small muted">Az</span>
+                  <span class="heatmap-cell lvl-0"></span>
+                  <span class="heatmap-cell lvl-1"></span>
+                  <span class="heatmap-cell lvl-2"></span>
+                  <span class="heatmap-cell lvl-3"></span>
+                  <span class="heatmap-cell lvl-4"></span>
+                  <span class="small muted">Çok</span>
+                </div>
+              </div>
+              <div id="personalHeatmap" class="heatmap-scroll"></div>
+            </div>
           </div>
         </section>
 
@@ -579,6 +627,23 @@
           <h4 class="modal-subhead">Çeyrek Dönem İlerlemesi</h4>
           <div id="modalQuarterBars" class="bars-stack"></div>
         </div>
+      </div>
+
+      <div class="modal-mini-cal-box">
+        <div class="sync-box-head">
+          <h4 class="modal-subhead" style="margin:0;">Son 12 Hafta Çalışma Takvimin</h4>
+          <button id="modalOpenPersonalCalBtn" class="btn btn-xs" type="button">Tam Takvimi Aç →</button>
+        </div>
+        <div id="modalMiniHeatmap" class="mini-heatmap-wrap"></div>
+      </div>
+
+      <div class="storage-explain-box">
+        <h4 class="modal-subhead" style="margin:0 0 6px;">Verilerin Nereye Kaydediliyor?</h4>
+        <ul class="clean-list small" style="margin:0;">
+          <li><strong>Bu Cihaz &amp; Bu Tarayıcı (Otomatik):</strong> İşaretlediğin konu, hafta ve günlük çalışmalar anında bu tarayıcının yerel deposuna (<code class="mono">localStorage</code> + yedek <code class="mono">IndexedDB</code>) yazılır. Dış sunucuya gönderilmez; sayfayı kapatıp açsan da kalır.</li>
+          <li><strong>Ne Zaman Kaybolur?</strong> Tarayıcı site verilerini/çerezleri temizlersen, Gizli Sekme kullanırsan veya başka bir telefon/bilgisayardan girersen yerel kayıt oraya otomatik geçmez.</li>
+          <li><strong>Cihazlar Arası Taşıma &amp; Kalıcı Yedek:</strong> Aşağıdaki <strong>Sync Kodunu / Bağlantısını</strong> WhatsApp'a veya notlarına kopyala; ya da tek tıkla <strong>JSON / Obsidian .md</strong> indir.</li>
+        </ul>
       </div>
 
       <div class="sync-code-box">

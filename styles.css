@@ -1479,6 +1479,222 @@ tr:last-child td {
   animation: lintuPop 0.2s ease both;
 }
 
+/* Storage Explanation & Personal Calendar / Heatmap */
+.storage-explain-box {
+  background: var(--brand-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+  margin: 12px 0;
+}
+
+.modal-mini-cal-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.mini-heatmap-wrap {
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.personal-cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.personal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 10px;
+  flex: 1 1 auto;
+}
+
+.personal-cal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.personal-month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.personal-month-title {
+  margin: 0;
+  font-size: 1.05rem;
+  min-width: 120px;
+  text-align: center;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.personal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-day-cell {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 52px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--fg);
+  font-family: var(--font-body);
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cal-day-cell:hover {
+  transform: translateY(-1px);
+  border-color: var(--brand);
+}
+
+.cal-day-cell.other-month {
+  opacity: 0.42;
+}
+
+.cal-day-cell.today {
+  border: 2px solid var(--brand);
+}
+
+.cal-day-cell.selected {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+
+.cal-day-num {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cal-day-count {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  align-self: flex-end;
+}
+
+[data-theme="dark"] .cal-day-count {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.lvl-0 { background: var(--surface-2); }
+.lvl-1 { background: #ccf2e4; border-color: #9de4ca; }
+.lvl-2 { background: #8ae0c2; border-color: #5bcfa7; }
+.lvl-3 { background: #2fa882; border-color: #248a6a; color: #ffffff; }
+.lvl-4 { background: #1b82bd; border-color: #156797; color: #ffffff; }
+
+[data-theme="dark"] .lvl-0 { background: #1b2530; border-color: #263443; }
+[data-theme="dark"] .lvl-1 { background: #164439; border-color: #1f5e4f; }
+[data-theme="dark"] .lvl-2 { background: #1f6c58; border-color: #2c8f75; }
+[data-theme="dark"] .lvl-3 { background: #3bb68d; border-color: #65c39f; color: #061b14; }
+[data-theme="dark"] .lvl-4 { background: #2f97d1; border-color: #54aee0; color: #ffffff; }
+
+.heatmap-card {
+  margin-top: 4px;
+}
+
+.heatmap-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.heatmap-months-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  min-width: 680px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+  width: max-content;
+}
+
+.heatmap-cell {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid rgba(15, 36, 51, 0.08);
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+[data-theme="dark"] .heatmap-cell {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.22);
+}
+
+.heatmap-cell.selected {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.heatmap-grid.mini {
+  grid-template-rows: repeat(7, 11px);
+  gap: 3px;
+}
+
+.heatmap-grid.mini .heatmap-cell {
+  width: 11px;
+  height: 11px;
+}
+
 /* Mobile Backdrop */
 .sidebar-backdrop {
   display: none;
@@ -1513,10 +1729,14 @@ tr:last-child td {
   .annual-grid,
   .week-grid,
   .calc-grid,
+  .personal-cal-layout,
   .modal-profile-row,
   .modal-stats-strip,
   .modal-bars-grid {
     grid-template-columns: 1fr;
+  }
+  .personal-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
   .tour-body-row {
     flex-direction: column;
